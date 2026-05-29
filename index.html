@@ -305,6 +305,23 @@ svg{display:block;width:100%;height:auto;}
   display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);
 }
 .photo-close:active{transform:scale(.92);}
+
+/* вбудована камера */
+.cam-overlay{position:fixed;inset:0;z-index:60;background:#000;display:flex;flex-direction:column;}
+.cam-video{flex:1;width:100%;object-fit:cover;background:#000;}
+.cam-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:18px 24px calc(22px + env(safe-area-inset-bottom));background:#000;
+}
+.cam-cancel{
+  width:96px;background:none;border:none;color:#fff;font-family:'JetBrains Mono';
+  font-size:15px;cursor:pointer;text-align:left;
+}
+.cam-shot{
+  width:74px;height:74px;border-radius:50%;cursor:pointer;
+  background:#fff;border:4px solid rgba(255,255,255,.4);background-clip:padding-box;
+}
+.cam-shot:active{transform:scale(.93);}
 .photo-flag{margin-left:6px;opacity:.7;}
 </style>
 </head>
@@ -979,11 +996,11 @@ function viewService(){
     `<button class="svc-tab ${t.id===filter?'on':''}" data-svc-filter="${t.id}">${t.name}</button>`
   ).join("")}</div>`;
 
-  const totalLabel = filter==="all" ? "всього на сервіс" : "сума · "+ (SVC_CATS.find(c=>c.id===filter)||{}).name.toLowerCase();
+  const totalLabel = filter==="all" ? "всього" : "сума · "+ (SVC_CATS.find(c=>c.id===filter)||{}).name.toLowerCase();
 
   let body;
   if(list.length===0){
-    body = `<div class="empty"><div class="e-ico">🔧</div><p>${filter==="all"?"Записів сервісу ще немає.":"У цій категорії записів немає."}</p></div>`;
+    body = `<div class="empty"><div class="e-ico">🔧</div><p>${filter==="all"?"Записів ще немає.":"У цій категорії записів немає."}</p></div>`;
   }else{
     body = list.map(x=>{
       const n = (x.files||[]).length;
@@ -1000,7 +1017,7 @@ function viewService(){
     }).join("");
   }
   return `
-  <div class="topbar"><button class="icon-btn back" data-go="car">‹</button><h1>Сервіс</h1></div>
+  <div class="topbar"><button class="icon-btn back" data-go="car">‹</button><h1>Обслуговування</h1></div>
   <div class="hero" style="padding:16px 20px;margin-bottom:12px">
     <div class="label">${totalLabel}</div>
     <div class="value num" style="font-size:42px">${fmt(total,2)}<span class="unit" style="font-size:16px">€</span></div>
@@ -1195,7 +1212,12 @@ function bind(){
 
   // === фото заправки ===
   const photoCam=document.getElementById("photo-cam");
-  if(photoCam) photoCam.onclick=()=>{ feedback(); document.getElementById("photo-file-cam").click(); };
+  if(photoCam) photoCam.onclick=()=>{
+    feedback();
+    const cb=(blob)=>savePhotoBlob(blob);
+    cb.fallback=()=>{ const i=document.getElementById("photo-file-cam"); if(i) i.click(); };
+    if(!openCamera(cb)){ const i=document.getElementById("photo-file-cam"); if(i) i.click(); }
+  };
   const photoGal=document.getElementById("photo-gal");
   if(photoGal) photoGal.onclick=()=>{ feedback(); document.getElementById("photo-file-gal").click(); };
   const photoFileCam=document.getElementById("photo-file-cam");
@@ -1225,7 +1247,12 @@ function bind(){
     state.view="serviceedit"; save(); render();
   });
   const sCam=document.getElementById("svc-cam");
-  if(sCam) sCam.onclick=()=>{ feedback(); document.getElementById("svc-file-cam").click(); };
+  if(sCam) sCam.onclick=()=>{
+    feedback();
+    const cb=(blob)=>saveSvcBlob(blob);
+    cb.fallback=()=>{ const i=document.getElementById("svc-file-cam"); if(i) i.click(); };
+    if(!openCamera(cb)){ const i=document.getElementById("svc-file-cam"); if(i) i.click(); }
+  };
   const sGal=document.getElementById("svc-gal");
   if(sGal) sGal.onclick=()=>{ feedback(); document.getElementById("svc-file-gal").click(); };
   const sDoc=document.getElementById("svc-doc");
@@ -1353,8 +1380,53 @@ function delFill(id){
 
 /* Вибір фото: стискаємо, зберігаємо в IndexedDB, показуємо.
    Перед перемальовуванням стягуємо введені поля в state, щоб не втратити їх. */
+/* Вбудована камера через getUserMedia. onShot(blob) — колбек зі знятим кадром.
+   Повертає true, якщо камеру вдалось запустити; false — щоб викликач зробив фолбек. */
+function openCamera(onShot){
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
+  const ov=document.createElement("div");
+  ov.className="cam-overlay";
+  ov.innerHTML=`
+    <video class="cam-video" autoplay playsinline muted></video>
+    <div class="cam-bar">
+      <button class="cam-cancel" type="button">Скасувати</button>
+      <button class="cam-shot" type="button" aria-label="Зняти"></button>
+      <div style="width:96px"></div>
+    </div>`;
+  const video=ov.querySelector("video");
+  let stream=null, closed=false;
+  const stop=()=>{ if(stream) stream.getTracks().forEach(t=>t.stop()); };
+  const close=()=>{
+    if(closed) return; closed=true;
+    stop(); if(ov.parentNode) document.body.removeChild(ov);
+    if(history.state && history.state.cam) history.back();
+    window.removeEventListener("popstate", onPop);
+  };
+  const onPop=()=>{ closed=true; stop(); if(ov.parentNode) document.body.removeChild(ov); };
+  ov.querySelector(".cam-cancel").onclick=close;
+  ov.querySelector(".cam-shot").onclick=()=>{
+    if(!video.videoWidth) return;
+    const c=document.createElement("canvas");
+    c.width=video.videoWidth; c.height=video.videoHeight;
+    c.getContext("2d").drawImage(video,0,0);
+    c.toBlob(b=>{ feedback(); close(); if(b) onShot(b); }, "image/jpeg", 0.9);
+  };
+  history.pushState({cam:true}, "");
+  window.addEventListener("popstate", onPop);
+  document.body.appendChild(ov);
+  navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}}, audio:false})
+    .then(s=>{ if(closed){ s.getTracks().forEach(t=>t.stop()); return; } stream=s; video.srcObject=s; })
+    .catch(()=>{ close(); /* дозвіл відхилено або немає камери — викличемо фолбек */ if(typeof onShot.fallback==="function") onShot.fallback(); });
+  return true;
+}
+
 function onPhotoPick(e){
   const file=e.target.files && e.target.files[0]; if(!file) return;
+  savePhotoBlob(file);
+  e.target.value="";
+}
+/* Зберегти фото заправки з Blob (камера) або File (галерея/файл). */
+function savePhotoBlob(file){
   stashFillForm();
   state._photoBusy=true; render();
   compressImage(file,1280,0.8)
@@ -1414,6 +1486,14 @@ function onServiceAttach(e, isImage){
       .catch(()=>{ state._svcBusy=false; state._svcError="Не вдалося додати файл."; render(); });
   }
   e.target.value="";
+}
+/* Додати фото сервісу з Blob (камера). */
+function saveSvcBlob(file){
+  stashSvcForm(); ensureSvcFiles();
+  state._svcBusy=true; render();
+  compressImage(file,1280,0.8)
+    .then(blob=>{ const id="ph_"+uid(); return photoPut(id,blob).then(()=>{ state._svcFiles.push({id,name:"photo.jpg",type:"image/jpeg",isImage:true}); state._svcBusy=false; feedback(); render(); }); })
+    .catch(()=>{ state._svcBusy=false; state._svcError="Не вдалося додати фото."; render(); });
 }
 function removeAttach(id){
   stashSvcForm(); ensureSvcFiles();
