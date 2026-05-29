@@ -262,6 +262,13 @@ svg{display:block;width:100%;height:auto;}
   display:flex;align-items:center;justify-content:center;padding:16px;cursor:pointer;
 }
 .photo-overlay img{max-width:100%;max-height:100%;border-radius:8px;}
+.photo-close{
+  position:absolute;top:calc(14px + env(safe-area-inset-top));right:16px;
+  width:48px;height:48px;border-radius:50%;border:none;cursor:pointer;
+  background:rgba(255,255,255,.15);color:#fff;font-size:22px;line-height:1;
+  display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);
+}
+.photo-close:active{transform:scale(.92);}
 .photo-flag{margin-left:6px;opacity:.7;}
 </style>
 </head>
@@ -771,8 +778,12 @@ function viewAdd(){
            <img class="photo-thumb" data-photo="${currentPhotoId(editing)}" data-photo-view="${currentPhotoId(editing)}" alt="фото">
            <button class="btn btn-ghost" id="photo-remove" style="margin-top:10px">Прибрати фото</button>
          </div>`
-      : `<button class="btn btn-ghost" id="photo-add">+ Додати фото</button>
-         <input type="file" id="photo-file" accept="image/*" style="display:none">` }
+      : `<div class="btn-row">
+           <button class="btn btn-ghost" id="photo-cam">📷 Сфотографувати</button>
+           <button class="btn btn-ghost" id="photo-gal">З галереї</button>
+         </div>
+         <input type="file" id="photo-file-cam" accept="image/*" capture="environment" style="display:none">
+         <input type="file" id="photo-file-gal" accept="image/*" style="display:none">` }
     ${ state._photoBusy ? `<div class="hint">Обробляю фото…</div>` : "" }
   </div>
 
@@ -1023,10 +1034,14 @@ function bind(){
   if(document.getElementById("toggle-full")) updatePreview();
 
   // === фото заправки ===
-  const photoAdd=document.getElementById("photo-add");
-  if(photoAdd) photoAdd.onclick=()=>{ feedback(); document.getElementById("photo-file").click(); };
-  const photoFile=document.getElementById("photo-file");
-  if(photoFile) photoFile.onchange=onPhotoPick;
+  const photoCam=document.getElementById("photo-cam");
+  if(photoCam) photoCam.onclick=()=>{ feedback(); document.getElementById("photo-file-cam").click(); };
+  const photoGal=document.getElementById("photo-gal");
+  if(photoGal) photoGal.onclick=()=>{ feedback(); document.getElementById("photo-file-gal").click(); };
+  const photoFileCam=document.getElementById("photo-file-cam");
+  if(photoFileCam) photoFileCam.onchange=onPhotoPick;
+  const photoFileGal=document.getElementById("photo-file-gal");
+  if(photoFileGal) photoFileGal.onchange=onPhotoPick;
   const photoRemove=document.getElementById("photo-remove");
   if(photoRemove) photoRemove.onclick=()=>{ feedback(); state.uiPhotoId=null; state.uiPhotoCleared=true; render(); };
   // підвантаження мініатюр з IndexedDB (асинхронно, після рендера)
@@ -1158,15 +1173,31 @@ function onPhotoPick(e){
     .catch(()=>{ state._photoBusy=false; state._addError="Не вдалося обробити фото."; render(); });
 }
 
-/* Перегляд фото на весь екран (DOM-оверлей поза рендером). */
+/* Перегляд фото на весь екран (DOM-оверлей поза рендером).
+   Закриття: хрестик, тап по тлу, або апаратна кнопка «назад». */
 function openPhoto(id){
   photoGet(id).then(blob=>{
     if(!blob) return;
     const url=URL.createObjectURL(blob);
     const ov=document.createElement("div");
     ov.className="photo-overlay";
-    ov.innerHTML=`<img src="${url}" alt="фото">`;
-    ov.onclick=()=>{ document.body.removeChild(ov); URL.revokeObjectURL(url); };
+    ov.innerHTML=`<button class="photo-close" aria-label="Закрити">✕</button><img src="${url}" alt="фото">`;
+    let closed=false;
+    const close=()=>{
+      if(closed) return; closed=true;
+      if(ov.parentNode) document.body.removeChild(ov);
+      URL.revokeObjectURL(url);
+      // прибираємо запис історії, щоб «назад» не виходив з додатка зайвий раз
+      if(history.state && history.state.photo) history.back();
+      window.removeEventListener("popstate", onPop);
+    };
+    const onPop=()=>{ closed=true; if(ov.parentNode) document.body.removeChild(ov); URL.revokeObjectURL(url); };
+    // тап по тлу (не по фото) закриває
+    ov.onclick=(e)=>{ if(e.target===ov) close(); };
+    ov.querySelector(".photo-close").onclick=close;
+    // апаратна кнопка «назад» закриває перегляд, а не екран
+    history.pushState({photo:true}, "");
+    window.addEventListener("popstate", onPop);
     document.body.appendChild(ov);
   }).catch(()=>{});
 }
