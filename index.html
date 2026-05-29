@@ -138,7 +138,7 @@ body{
 
 /* ===== Форма / поля введення ===== */
 .field{margin-bottom:18px;}
-.field label{display:block;color:var(--text-dim);font-size:14px;margin:0 4px 8px;}
+.field label{display:block;color:var(--text);font-size:15px;font-weight:500;margin:0 4px 8px;opacity:.85;}
 .field input{
   width:100%;background:var(--surface-2);border:2px solid var(--line);border-radius:16px;
   color:var(--text);font-family:'Fraunces',serif;font-size:30px;font-weight:500;
@@ -208,8 +208,9 @@ svg{display:block;width:100%;height:auto;}
 .dash .hero .label{font-size:13px;}
 .dash .hero .value{font-size:46px;margin:2px 0 2px;}
 .dash .hero .unit{font-size:13px;}
-.dash .topnav{gap:8px;margin-bottom:12px;}
-.dash .navbtn{flex:1;min-height:44px;font-size:16px;border-radius:13px;}
+.dash .topnav{gap:6px;margin-bottom:12px;}
+.dash .navbtn{flex:1;min-height:44px;font-size:14px;border-radius:13px;padding:0 4px;}
+.dash .topnav .icon-btn{width:40px;}
 .dash .grid{gap:10px;margin-bottom:10px;}
 .dash .stat{padding:11px 14px;border-radius:14px;}
 .dash .stat .value{font-size:23px;margin-top:3px;}
@@ -253,6 +254,41 @@ svg{display:block;width:100%;height:auto;}
 
 /* фото заправки */
 .photo-box{display:flex;flex-direction:column;align-items:flex-start;}
+.photo-btn{font-size:24px;}
+
+/* вкладки фільтра / вибору категорії сервісу */
+.svc-tabs{display:flex;gap:6px;margin-bottom:14px;}
+.svc-tab{
+  flex:1;min-height:40px;padding:0 4px;border-radius:11px;cursor:pointer;
+  background:var(--surface);color:var(--text-dim);border:1px solid var(--line);
+  font-family:'JetBrains Mono';font-size:13px;font-weight:500;box-shadow:var(--shadow-sm);
+  transition:transform .1s;
+}
+.svc-tab:active{transform:scale(.96);}
+.svc-tab.on{background:var(--grass);color:var(--grass-ink);border-color:transparent;}
+
+/* textarea опису роботи — як поле введення, втиснуте */
+.field textarea{
+  width:100%;background:var(--surface-2);border:2px solid var(--line);border-radius:16px;
+  color:var(--text);font-family:'Fraunces',serif;font-size:22px;font-weight:500;line-height:1.35;
+  padding:14px 18px;outline:none;resize:vertical;box-shadow:var(--inset);
+}
+
+/* список вкладень сервісу */
+.attach-list{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px;}
+.attach{position:relative;}
+.attach-thumb{width:84px;height:84px;object-fit:cover;border-radius:12px;border:1px solid var(--line);box-shadow:var(--shadow-sm);background:var(--surface-2);}
+.attach-file{
+  display:flex;align-items:center;gap:8px;padding:10px 12px;max-width:100%;
+  background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-sm);cursor:pointer;
+}
+.attach-ico{font-size:22px;}
+.attach-name{font-size:13px;color:var(--text-dim);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.attach-x{
+  position:absolute;top:-7px;right:-7px;width:24px;height:24px;border-radius:50%;
+  border:none;background:var(--danger);color:#fff;font-size:13px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);
+}
 .photo-thumb{
   width:100%;max-height:240px;object-fit:cover;border-radius:14px;
   border:1px solid var(--line);box-shadow:var(--shadow-sm);cursor:pointer;background:var(--surface-2);
@@ -292,7 +328,7 @@ let state = load();
 function load(){
   try{
     const raw = localStorage.getItem(STORE_KEY);
-    if(raw){ const s = JSON.parse(raw); if(s && s.cars){ s._arm=null; s.uiRename=false; s.uiDelCar=false; s.uiAddName=null; s.uiAddAccent=null; s.uiPhotoId=null; s.uiPhotoCleared=false; s._photoBusy=false; s._pendingImport=null; s._pendingPhotos=null; s._importError=null; s._addError=null; if(s.view==="addcar"||s.view==="settings")s.view="cars"; return s; } }
+    if(raw){ const s = JSON.parse(raw); if(s && s.cars){ s._arm=null; s.uiRename=false; s.uiDelCar=false; s.uiAddName=null; s.uiAddAccent=null; s.uiPhotoId=null; s.uiPhotoCleared=false; s._photoBusy=false; s._draft=null; s.svcEditId=null; s._svcDraft=null; s._svcFiles=null; s._svcBusy=false; s._svcError=null; s.svcFilter="all"; s._pendingImport=null; s._pendingPhotos=null; s._importError=null; s._addError=null; if(s.view==="addcar"||s.view==="settings"||s.view==="serviceedit")s.view="cars"; return s; } }
   }catch(e){}
   return { schemaVersion:1, theme:"dark", activeCarId:null, view:"cars", cars:[] };
 }
@@ -563,7 +599,7 @@ function render(){
   const root=document.documentElement;
   root.setAttribute("data-theme", state.theme);
   // акцент під колір авто (на екранах, що стосуються конкретного авто)
-  const scoped=["car","add","history","charts","carsettings"].includes(state.view);
+  const scoped=["car","add","history","charts","carsettings","service","serviceedit"].includes(state.view);
   let a = scoped ? accentFor(activeCar()) : null;
   // живий прев'ю обраного кольору під час створення авто
   if(!a && state.view==="addcar" && state.uiAddAccent) a = accentFor({accent:state.uiAddAccent});
@@ -583,6 +619,8 @@ function render(){
     case "history":     html=viewHistory(); break;
     case "charts":      html=viewCharts(); break;
     case "carsettings": html=viewCarSettings(); break;
+    case "service":     html=viewService(); break;
+    case "serviceedit": html=viewServiceEdit(); break;
     case "data":        html=viewData(); break;
     default:            html=viewCars();
   }
@@ -664,6 +702,7 @@ function viewCar(){
     <button class="icon-btn back" data-go="cars">‹</button>
     <button class="btn btn-ghost navbtn" data-go="history">Історія</button>
     <button class="btn btn-ghost navbtn" data-go="charts">Графіки</button>
+    <button class="btn btn-ghost navbtn" data-go="service">Сервіс</button>
     <button class="icon-btn" data-go="carsettings" title="Налаштування авто">⚙</button>
   </div>
 
@@ -706,7 +745,8 @@ function viewAdd(){
   const editing = state.editFillId ? car.fills.find(x=>x.id===state.editFillId) : null;
   // Точка відліку: коли ще нема жодного запису, або редагуємо саме базовий запис
   const isBaseline = editing ? !!editing.isBaseline : car.fills.length===0;
-  const v = editing || { odometer:"", liters:"", cost:"", full:true, date:todayLocalISO() };
+  const base = editing || { odometer:"", liters:"", cost:"", full:true, date:todayLocalISO() };
+  const v = state._draft ? Object.assign({}, base, state._draft) : base;
   const fullOn = v.full!==false;
 
   if(isBaseline){
@@ -745,16 +785,15 @@ function viewAdd(){
 
   <div class="field">
     <label>Одометр, км</label>
-    <input id="f-odo" inputmode="decimal" placeholder="0" value="${editing?v.odometer:""}">
-    <div class="hint">Загальний пробіг на щитку зараз</div>
+    <input id="f-odo" inputmode="decimal" placeholder="0" value="${v.odometer||""}">
   </div>
   <div class="field">
     <label>Літри</label>
-    <input id="f-lit" inputmode="decimal" placeholder="0" value="${editing?v.liters:""}">
+    <input id="f-lit" inputmode="decimal" placeholder="0" value="${v.liters||""}">
   </div>
   <div class="field">
     <label>Сума, €</label>
-    <input id="f-cost" inputmode="decimal" placeholder="0" value="${editing?v.cost:""}">
+    <input id="f-cost" inputmode="decimal" placeholder="0" value="${v.cost||""}">
     <div class="hint" id="price-hint"></div>
   </div>
 
@@ -772,15 +811,14 @@ function viewAdd(){
   </div>
 
   <div class="field">
-    <label>Фото чека або колонки</label>
     ${ currentPhotoId(editing)
       ? `<div class="photo-box">
            <img class="photo-thumb" data-photo="${currentPhotoId(editing)}" data-photo-view="${currentPhotoId(editing)}" alt="фото">
            <button class="btn btn-ghost" id="photo-remove" style="margin-top:10px">Прибрати фото</button>
          </div>`
       : `<div class="btn-row">
-           <button class="btn btn-ghost" id="photo-cam">📷 Сфотографувати</button>
-           <button class="btn btn-ghost" id="photo-gal">З галереї</button>
+           <button class="btn btn-ghost photo-btn" id="photo-cam" title="Сфотографувати">📷</button>
+           <button class="btn btn-ghost photo-btn" id="photo-gal" title="З галереї">🖼️</button>
          </div>
          <input type="file" id="photo-file-cam" accept="image/*" capture="environment" style="display:none">
          <input type="file" id="photo-file-gal" accept="image/*" style="display:none">` }
@@ -901,19 +939,140 @@ function viewCarSettings(){
   return `
   <div class="topbar"><button class="icon-btn back" data-go="car">‹</button><h1>Авто</h1></div>
 
-  <div class="settings-carname" style="border-left-color:${col}">${esc(car.name)}</div>
+  ${ state.uiRename
+    ? `<div class="field" style="margin-bottom:12px"><input id="rename-input" value="${esc(car.name)}"></div>
+       <div class="btn-row" style="margin-bottom:18px"><button class="btn btn-ghost" id="rename-cancel">Скасувати</button><button class="btn btn-primary" id="rename-save">Зберегти</button></div>`
+    : `<div class="settings-carname" style="border-left-color:${col}">${esc(car.name)}</div>
+       <button class="btn btn-ghost" id="rename-car" style="margin:0 0 18px">Перейменувати</button>` }
 
-  ${ state.uiRename ? `
-    <div class="field" style="margin-bottom:12px"><input id="rename-input" value="${esc(car.name)}"></div>
-    <div class="btn-row"><button class="btn btn-ghost" id="rename-cancel">Скасувати</button><button class="btn btn-primary" id="rename-save">Зберегти</button></div>`
-  : `
-    ${swatchRow(car.accent||"green")}
-    <button class="btn btn-ghost" id="rename-car" style="margin:18px 0 12px">Перейменувати</button>
-    ${ state.uiDelCar ? `
-      <div class="preview" style="display:block;border-color:var(--danger);color:var(--danger)">Видалити «${esc(car.name)}» з усіма заправками? Це не можна скасувати.</div>
-      <div class="btn-row"><button class="btn btn-ghost" id="del-cancel">Скасувати</button><button class="btn btn-danger" id="del-confirm">Видалити</button></div>`
+  ${swatchRow(car.accent||"green")}
+
+  <div style="margin-top:18px">
+  ${ state.uiDelCar
+    ? `<div class="preview" style="display:block;border-color:var(--danger);color:var(--danger)">Видалити «${esc(car.name)}» з усіма заправками? Це не можна скасувати.</div>
+       <div class="btn-row"><button class="btn btn-ghost" id="del-cancel">Скасувати</button><button class="btn btn-danger" id="del-confirm">Видалити</button></div>`
     : `<button class="btn btn-ghost" id="del-car" style="color:var(--danger)">Видалити авто</button>` }
-  ` }`;
+  </div>`;
+}
+
+/* ----- Екран: Сервіс (стрічка) ----- */
+const SVC_CATS = [
+  {id:"service", name:"Сервіс"},
+  {id:"repair",  name:"Ремонт"},
+  {id:"other",   name:"Інше"}
+];
+function svcCat(x){ return x.category || "service"; } // старі записи → Сервіс
+function carServices(car){
+  return [...(car.services||[])].sort((a,b)=> b.date.localeCompare(a.date) || b.odometer-a.odometer);
+}
+function viewService(){
+  const car = activeCar();
+  if(!car) return viewCars();
+  const all = carServices(car);
+  const filter = state.svcFilter || "all";   // all | service | repair | other
+  const list = filter==="all" ? all : all.filter(x=>svcCat(x)===filter);
+  const total = list.reduce((s,x)=>s+(x.cost||0),0);
+
+  // ряд фільтра: Усе + три категорії
+  const tabs = [{id:"all",name:"Усе"}, ...SVC_CATS];
+  const filterRow = `<div class="svc-tabs">${tabs.map(t=>
+    `<button class="svc-tab ${t.id===filter?'on':''}" data-svc-filter="${t.id}">${t.name}</button>`
+  ).join("")}</div>`;
+
+  const totalLabel = filter==="all" ? "всього на сервіс" : "сума · "+ (SVC_CATS.find(c=>c.id===filter)||{}).name.toLowerCase();
+
+  let body;
+  if(list.length===0){
+    body = `<div class="empty"><div class="e-ico">🔧</div><p>${filter==="all"?"Записів сервісу ще немає.":"У цій категорії записів немає."}</p></div>`;
+  }else{
+    body = list.map(x=>{
+      const n = (x.files||[]).length;
+      const cat = SVC_CATS.find(c=>c.id===svcCat(x)) || SVC_CATS[0];
+      return `<div class="hist-item" data-svc-edit="${x.id}">
+        <div class="date num">${fmtDate(x.date)}</div>
+        <div class="mid">
+          <div class="lc" style="font-size:16px">${esc(x.description||"—")}</div>
+          <div class="o">${fmt(x.odometer,0)} км${n?(" · 📎 "+n):""}</div>
+          <span class="tag">${cat.name}</span>
+        </div>
+        <div class="l100 num" style="font-size:20px">${fmt(x.cost,2)}<small>€</small></div>
+      </div>`;
+    }).join("");
+  }
+  return `
+  <div class="topbar"><button class="icon-btn back" data-go="car">‹</button><h1>Сервіс</h1></div>
+  <div class="hero" style="padding:16px 20px;margin-bottom:12px">
+    <div class="label">${totalLabel}</div>
+    <div class="value num" style="font-size:42px">${fmt(total,2)}<span class="unit" style="font-size:16px">€</span></div>
+  </div>
+  ${filterRow}
+  ${body}
+  <div class="fab-wrap"><button class="btn btn-primary" data-go="serviceedit">+ Запис</button></div>`;
+}
+
+/* ----- Екран: запис сервісу ----- */
+function viewServiceEdit(){
+  const car = activeCar();
+  if(!car) return viewCars();
+  const editing = state.svcEditId ? (car.services||[]).find(x=>x.id===state.svcEditId) : null;
+  const base = editing || { odometer:"", description:"", cost:"", category:"service", date:todayLocalISO() };
+  const v = state._svcDraft ? Object.assign({}, base, state._svcDraft) : base;
+  const files = state._svcFiles || (editing ? (editing.files||[]).slice() : []);
+
+  const fileList = files.length ? `<div class="attach-list">${files.map(f=>
+    f.isImage
+      ? `<div class="attach"><img class="attach-thumb" data-photo="${f.id}" data-photo-view="${f.id}" alt="фото"><button class="attach-x" data-attach-del="${f.id}">✕</button></div>`
+      : `<div class="attach attach-file" data-file-view="${f.id}"><span class="attach-ico">📄</span><span class="attach-name">${esc(f.name||"файл")}</span><button class="attach-x" data-attach-del="${f.id}">✕</button></div>`
+  ).join("")}</div>` : "";
+
+  return `
+  <div class="topbar">
+    <button class="icon-btn back" data-go="${editing?'service':'service'}">‹</button>
+    <h1>${editing?'Редагувати':'Запис'}</h1>
+  </div>
+
+  <div class="field">
+    <label>Одометр, км</label>
+    <input id="s-odo" inputmode="decimal" placeholder="0" value="${v.odometer||""}">
+  </div>
+  <div class="field">
+    <label>Категорія</label>
+    <div class="svc-tabs">${SVC_CATS.map(c=>
+      `<button class="svc-tab ${ (v.category||'service')===c.id ? 'on':'' }" data-svc-cat="${c.id}">${c.name}</button>`
+    ).join("")}</div>
+  </div>
+  <div class="field">
+    <label>Що зроблено</label>
+    <textarea id="s-desc" rows="2" placeholder="">${esc(v.description||"")}</textarea>
+  </div>
+  <div class="field">
+    <label>Вартість, €</label>
+    <input id="s-cost" inputmode="decimal" placeholder="0" value="${v.cost||""}">
+  </div>
+  <div class="field">
+    <label>Дата</label>
+    <input id="s-date" type="datetime-local" style="font-size:20px" value="${v.date}">
+  </div>
+
+  <div class="field">
+    <label>Чеки, гарантії, фото</label>
+    ${fileList}
+    <div class="btn-row">
+      <button class="btn btn-ghost photo-btn" id="svc-cam" title="Сфотографувати">📷</button>
+      <button class="btn btn-ghost photo-btn" id="svc-gal" title="З галереї">🖼️</button>
+      <button class="btn btn-ghost photo-btn" id="svc-doc" title="Файл">📄</button>
+    </div>
+    <input type="file" id="svc-file-cam" accept="image/*" capture="environment" style="display:none">
+    <input type="file" id="svc-file-gal" accept="image/*" style="display:none">
+    <input type="file" id="svc-file-doc" style="display:none">
+    ${ state._svcBusy ? `<div class="hint">Додаю вкладення…</div>` : "" }
+  </div>
+
+  <button class="btn btn-primary" id="save-svc">${editing?'Зберегти зміни':'Зберегти'}</button>
+  ${editing?`<div style="margin-top:12px">${ armed("svc:"+editing.id)
+      ? `<button class="btn btn-danger" data-del-svc="${editing.id}">Точно видалити?</button>`
+      : `<button class="btn btn-ghost" data-arm="svc:${editing.id}" style="color:var(--danger)">Видалити запис</button>` }</div>`:""}
+  ${state._svcError?`<div class="preview" style="display:block;border-color:var(--danger);color:var(--danger);margin-top:14px">${esc(state._svcError)}</div>`:""}`;
 }
 
 /* =========================================================
@@ -955,7 +1114,8 @@ function go(view){
   state.view=view;
   state.editFillId=null; state._addError=null; state._arm=null;
   state.uiRename=false; state.uiDelCar=false; state.uiAddName=null; state.uiAddAccent=null;
-  state.uiPhotoId=null; state.uiPhotoCleared=false; state._photoBusy=false;
+  state.svcEditId=null; state._svcDraft=null; state._svcFiles=null; state._svcBusy=false; state._svcError=null;
+  state.uiPhotoId=null; state.uiPhotoCleared=false; state._photoBusy=false; state._draft=null;
   state._pendingImport=null; state._pendingPhotos=null; state._importError=null;
   save(); render();
 }
@@ -1010,7 +1170,7 @@ function bind(){
   // редагувати заправку (з історії)
   document.querySelectorAll("[data-edit]").forEach(el=>el.onclick=()=>{
     feedback(); state.editFillId=el.dataset.edit; state.view="add"; state._addError=null;
-    state.uiPhotoId=null; state.uiPhotoCleared=false; state._photoBusy=false;
+    state.uiPhotoId=null; state.uiPhotoCleared=false; state._photoBusy=false; state._draft=null;
     save(); render();
   });
 
@@ -1049,7 +1209,35 @@ function bind(){
     photoGet(img.dataset.photo).then(blob=>{ if(blob) img.src=URL.createObjectURL(blob); }).catch(()=>{});
   });
   // перегляд фото на весь екран
-  document.querySelectorAll("[data-photo-view]").forEach(el=>el.onclick=()=>{ feedback(); openPhoto(el.dataset.photoView); });
+  document.querySelectorAll("[data-photo-view]").forEach(el=>el.onclick=(ev)=>{ if(ev.target.classList&&ev.target.classList.contains("attach-x"))return; feedback(); openPhoto(el.dataset.photoView); });
+
+  // === сервіс ===
+  document.querySelectorAll("[data-svc-filter]").forEach(el=>el.onclick=()=>{
+    feedback(); state.svcFilter=el.dataset.svcFilter; save(); render();
+  });
+  document.querySelectorAll("[data-svc-cat]").forEach(el=>el.onclick=()=>{
+    feedback(); stashSvcForm();
+    state._svcDraft = Object.assign({}, state._svcDraft||{}, {category:el.dataset.svcCat});
+    render();
+  });
+  document.querySelectorAll("[data-svc-edit]").forEach(el=>el.onclick=()=>{
+    feedback(); state.svcEditId=el.dataset.svcEdit; state._svcDraft=null; state._svcFiles=null; state._svcError=null;
+    state.view="serviceedit"; save(); render();
+  });
+  const sCam=document.getElementById("svc-cam");
+  if(sCam) sCam.onclick=()=>{ feedback(); document.getElementById("svc-file-cam").click(); };
+  const sGal=document.getElementById("svc-gal");
+  if(sGal) sGal.onclick=()=>{ feedback(); document.getElementById("svc-file-gal").click(); };
+  const sDoc=document.getElementById("svc-doc");
+  if(sDoc) sDoc.onclick=()=>{ feedback(); document.getElementById("svc-file-doc").click(); };
+  const sfc=document.getElementById("svc-file-cam"); if(sfc) sfc.onchange=(e)=>onServiceAttach(e,true);
+  const sfg=document.getElementById("svc-file-gal"); if(sfg) sfg.onchange=(e)=>onServiceAttach(e,true);
+  const sfd=document.getElementById("svc-file-doc"); if(sfd) sfd.onchange=(e)=>onServiceAttach(e,false);
+  document.querySelectorAll("[data-attach-del]").forEach(el=>el.onclick=(ev)=>{ ev.stopPropagation(); feedback(); removeAttach(el.dataset.attachDel); });
+  document.querySelectorAll("[data-file-view]").forEach(el=>el.onclick=()=>{ feedback(); openFile(el.dataset.fileView); });
+  const saveSvc=document.getElementById("save-svc");
+  if(saveSvc) saveSvc.onclick=saveService;
+  document.querySelectorAll("[data-del-svc]").forEach(el=>el.onclick=()=>{ feedback(); delService(el.dataset.delSvc); });
 
   // === дані (експорт/імпорт) ===
   const ej=document.getElementById("exp-json"); if(ej) ej.onclick=exportZip;
@@ -1163,14 +1351,115 @@ function delFill(id){
   disarm(); state.editFillId=null; save(); go("history");
 }
 
-/* Вибір фото: стискаємо, зберігаємо в IndexedDB, показуємо. */
+/* Вибір фото: стискаємо, зберігаємо в IndexedDB, показуємо.
+   Перед перемальовуванням стягуємо введені поля в state, щоб не втратити їх. */
 function onPhotoPick(e){
   const file=e.target.files && e.target.files[0]; if(!file) return;
+  stashFillForm();
   state._photoBusy=true; render();
   compressImage(file,1280,0.8)
     .then(blob=>{ const id="ph_"+uid(); return photoPut(id,blob).then(()=>id); })
     .then(id=>{ state.uiPhotoId=id; state.uiPhotoCleared=false; state._photoBusy=false; feedback(); render(); })
     .catch(()=>{ state._photoBusy=false; state._addError="Не вдалося обробити фото."; render(); });
+}
+/* Запам'ятати введені (ще не збережені) поля заправки в state. */
+function stashFillForm(){
+  const g=id=>document.getElementById(id);
+  if(g("f-odo")||g("f-lit")||g("f-cost")){
+    state._draft = {
+      odometer: g("f-odo")?g("f-odo").value:"",
+      liters:   g("f-lit")?g("f-lit").value:"",
+      cost:     g("f-cost")?g("f-cost").value:"",
+      full:     g("toggle-full")?g("toggle-full").classList.contains("on"):true,
+      date:     g("f-date")?g("f-date").value:""
+    };
+  }
+}
+
+/* ---------- Сервіс ---------- */
+function stashSvcForm(){
+  const g=id=>document.getElementById(id);
+  if(g("s-odo")||g("s-desc")||g("s-cost")){
+    const catBtn=document.querySelector("[data-svc-cat].on");
+    const cat = catBtn ? catBtn.dataset.svcCat : ((state._svcDraft&&state._svcDraft.category)||undefined);
+    state._svcDraft = {
+      odometer:    g("s-odo")?g("s-odo").value:"",
+      description: g("s-desc")?g("s-desc").value:"",
+      cost:        g("s-cost")?g("s-cost").value:"",
+      date:        g("s-date")?g("s-date").value:"",
+      category:    cat
+    };
+  }
+}
+function ensureSvcFiles(){
+  if(!state._svcFiles){
+    const car=activeCar();
+    const editing = state.svcEditId && car ? (car.services||[]).find(x=>x.id===state.svcEditId) : null;
+    state._svcFiles = editing ? (editing.files||[]).slice() : [];
+  }
+}
+/* Додати вкладення сервісу: фото — стискаємо; файл — як є. */
+function onServiceAttach(e, isImage){
+  const file=e.target.files && e.target.files[0]; if(!file) return;
+  stashSvcForm(); ensureSvcFiles();
+  state._svcBusy=true; render();
+  const finish=(id,name,type)=>{ state._svcFiles.push({id,name,type,isImage}); state._svcBusy=false; feedback(); render(); };
+  if(isImage){
+    compressImage(file,1280,0.8)
+      .then(blob=>{ const id="ph_"+uid(); return photoPut(id,blob).then(()=>finish(id,"photo.jpg","image/jpeg")); })
+      .catch(()=>{ state._svcBusy=false; state._svcError="Не вдалося додати фото."; render(); });
+  } else {
+    const id="fl_"+uid();
+    photoPut(id, file).then(()=>finish(id, file.name||"файл", file.type||""))
+      .catch(()=>{ state._svcBusy=false; state._svcError="Не вдалося додати файл."; render(); });
+  }
+  e.target.value="";
+}
+function removeAttach(id){
+  stashSvcForm(); ensureSvcFiles();
+  state._svcFiles = state._svcFiles.filter(f=>f.id!==id);
+  photoDel(id); render();
+}
+/* Відкрити вкладення-файл (PDF тощо) у новій вкладці. */
+function openFile(id){
+  photoGet(id).then(blob=>{
+    if(!blob) return;
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url; a.target="_blank"; a.rel="noopener"; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),10000);
+  }).catch(()=>{});
+}
+function saveService(){
+  const car=activeCar(); if(!car) return;
+  const g=id=>document.getElementById(id);
+  const odometer=parseNum(g("s-odo")?g("s-odo").value:"");
+  const description=(g("s-desc")?g("s-desc").value:"").trim();
+  const cost=parseNum(g("s-cost")?g("s-cost").value:"");
+  const date=(g("s-date")&&g("s-date").value)||todayLocalISO();
+  const catBtn=document.querySelector("[data-svc-cat].on");
+  const category = catBtn ? catBtn.dataset.svcCat : ((state._svcDraft&&state._svcDraft.category)|| (state.svcEditId?undefined:"service"));
+  if(isNaN(odometer)||!description||isNaN(cost)){
+    state._svcError="Заповни одометр, опис і вартість."; stashSvcForm(); ensureSvcFiles(); render(); return;
+  }
+  ensureSvcFiles();
+  if(!car.services) car.services=[];
+  if(state.svcEditId){
+    const s=car.services.find(x=>x.id===state.svcEditId);
+    Object.assign(s,{odometer,description,cost,date,files:state._svcFiles});
+    if(category) s.category=category;
+  }else{
+    car.services.push({id:uid(),odometer,description,cost,date,category:category||"service",files:state._svcFiles});
+  }
+  state.svcEditId=null; state._svcDraft=null; state._svcFiles=null; state._svcError=null;
+  feedback(); save(); go("service");
+}
+function delService(id){
+  const car=activeCar(); if(!car) return;
+  const s=(car.services||[]).find(x=>x.id===id);
+  if(s && s.files) s.files.forEach(f=>photoDel(f.id));
+  car.services=(car.services||[]).filter(x=>x.id!==id);
+  disarm(); state.svcEditId=null; save(); go("service");
 }
 
 /* Перегляд фото на весь екран (DOM-оверлей поза рендером).
@@ -1214,21 +1503,30 @@ function download(name, content, type){
 function cleanState(){
   return { schemaVersion:state.schemaVersion||1, theme:state.theme, activeCarId:state.activeCarId, cars:state.cars };
 }
-/* Усі id фото, які зараз використовуються. */
-function usedPhotoIds(){
-  const ids=[];
-  state.cars.forEach(c=>c.fills.forEach(f=>{ if(f.photo) ids.push(f.photo); }));
-  return ids;
+/* Усі вкладення в використанні: фото заправок + фото й файли сервісу.
+   Повертає [{id, isImage}]. */
+function usedAttachments(){
+  const out=[];
+  state.cars.forEach(c=>{
+    (c.fills||[]).forEach(f=>{ if(f.photo) out.push({id:f.photo, isImage:true}); });
+    (c.services||[]).forEach(s=>{ (s.files||[]).forEach(f=>out.push({id:f.id, isImage:!!f.isImage})); });
+  });
+  return out;
 }
-/* Зберегти копію: ZIP з data.json + photos/. */
+/* Зберегти копію: ZIP з data.json + photos/ (фото) + files/ (інші вкладення). */
 function exportZip(){
   feedback();
   const dataBytes = strToBytes(JSON.stringify(cleanState(),null,2));
   const files = [{name:"data.json", data:dataBytes}];
-  const ids = usedPhotoIds();
-  Promise.all(ids.map(id=>photoGet(id).then(blob=>blob?blob.arrayBuffer().then(ab=>({id,ab})):null).catch(()=>null)))
+  const atts = usedAttachments();
+  Promise.all(atts.map(a=>photoGet(a.id).then(blob=>blob?blob.arrayBuffer().then(ab=>({a,ab})):null).catch(()=>null)))
     .then(results=>{
-      results.forEach(r=>{ if(r) files.push({name:`photos/${r.id}.jpg`, data:new Uint8Array(r.ab)}); });
+      results.forEach(r=>{
+        if(!r) return;
+        const folder = r.a.isImage ? "photos" : "files";
+        const ext = r.a.isImage ? ".jpg" : "";
+        files.push({name:`${folder}/${r.a.id}${ext}`, data:new Uint8Array(r.ab)});
+      });
       const zip = zipStore(files);
       download(`zapravka-backup-${new Date().toISOString().slice(0,10)}.zip`, zip, "application/zip");
     });
@@ -1256,10 +1554,14 @@ function importBackup(e){
         if(!dataEntry) throw 0;
         const data=JSON.parse(bytesToStr(dataEntry.data));
         if(!data || !Array.isArray(data.cars)) throw 0;
-        // фото з архіву — у тимчасове, застосуємо при підтвердженні
-        const photos=entries.filter(x=>x.name.indexOf("photos/")===0 && !x.name.endsWith("/"))
-          .map(x=>({id:x.name.replace("photos/","").replace(/\.jpg$/,""), data:x.data}));
-        state._pendingImport=data; state._pendingPhotos=photos; state._importError=null; render();
+        // вкладення з архіву (фото + файли) — у тимчасове, застосуємо при підтвердженні
+        const atts=[];
+        entries.forEach(x=>{
+          if(x.name.endsWith("/")) return;
+          if(x.name.indexOf("photos/")===0) atts.push({id:x.name.slice(7).replace(/\.jpg$/,""), data:x.data, type:"image/jpeg"});
+          else if(x.name.indexOf("files/")===0) atts.push({id:x.name.slice(6), data:x.data, type:""});
+        });
+        state._pendingImport=data; state._pendingPhotos=atts; state._importError=null; render();
       } else {
         const data=JSON.parse(bytesToStr(bytes));
         if(!data || !Array.isArray(data.cars)) throw 0;
@@ -1270,10 +1572,10 @@ function importBackup(e){
   r.readAsArrayBuffer(file);
   e.target.value="";
 }
-/* Застосувати відновлення: дані → localStorage, фото → IndexedDB. */
+/* Застосувати відновлення: дані → localStorage, вкладення → IndexedDB. */
 function applyImport(){
-  const data=state._pendingImport, photos=state._pendingPhotos||[];
-  Promise.all(photos.map(p=>photoPut(p.id, new Blob([p.data],{type:"image/jpeg"})).catch(()=>{})))
+  const data=state._pendingImport, atts=state._pendingPhotos||[];
+  Promise.all(atts.map(p=>photoPut(p.id, new Blob([p.data], p.type?{type:p.type}:undefined)).catch(()=>{})))
     .then(()=>{
       state=Object.assign({view:"cars"}, data);
       feedback(); save(); render();
