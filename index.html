@@ -345,7 +345,7 @@ let state = load();
 function load(){
   try{
     const raw = localStorage.getItem(STORE_KEY);
-    if(raw){ const s = JSON.parse(raw); if(s && s.cars){ s._arm=null; s.uiRename=false; s.uiDelCar=false; s.uiAddName=null; s.uiAddAccent=null; s.uiPhotoId=null; s.uiPhotoCleared=false; s._photoBusy=false; s._draft=null; s.svcEditId=null; s._svcDraft=null; s._svcFiles=null; s._svcBusy=false; s._svcError=null; s.svcFilter="all"; s._pendingImport=null; s._pendingPhotos=null; s._importError=null; s._addError=null; if(s.view==="addcar"||s.view==="settings"||s.view==="serviceedit")s.view="cars"; return s; } }
+    if(raw){ const s = JSON.parse(raw); if(s && s.cars){ s._arm=null; s.uiRename=false; s.uiDelCar=false; s.uiAddName=null; s.uiAddAccent=null; s.uiPhotoId=null; s.uiPhotoCleared=false; s._photoBusy=false; s._draft=null; s.svcEditId=null; s._svcDraft=null; s._svcFiles=null; s._svcBusy=false; s._svcError=null; s._camError=null; s.svcFilter="all"; s._pendingImport=null; s._pendingPhotos=null; s._importError=null; s._addError=null; if(s.view==="addcar"||s.view==="settings"||s.view==="serviceedit")s.view="cars"; return s; } }
   }catch(e){}
   return { schemaVersion:1, theme:"dark", activeCarId:null, view:"cars", cars:[] };
 }
@@ -840,6 +840,7 @@ function viewAdd(){
          <input type="file" id="photo-file-cam" accept="image/*" capture="environment" style="display:none">
          <input type="file" id="photo-file-gal" accept="image/*" style="display:none">` }
     ${ state._photoBusy ? `<div class="hint">Обробляю фото…</div>` : "" }
+    ${ state._camError ? `<div class="preview" style="display:block;border-color:var(--danger);color:var(--danger);margin-top:8px">${esc(state._camError)}</div>` : "" }
   </div>
 
   <div class="preview" id="preview" style="display:none"></div>
@@ -1083,6 +1084,7 @@ function viewServiceEdit(){
     <input type="file" id="svc-file-gal" accept="image/*" style="display:none">
     <input type="file" id="svc-file-doc" style="display:none">
     ${ state._svcBusy ? `<div class="hint">Додаю вкладення…</div>` : "" }
+    ${ state._camError ? `<div class="preview" style="display:block;border-color:var(--danger);color:var(--danger);margin-top:8px">${esc(state._camError)}</div>` : "" }
   </div>
 
   <button class="btn btn-primary" id="save-svc">${editing?'Зберегти зміни':'Зберегти'}</button>
@@ -1131,7 +1133,7 @@ function go(view){
   state.view=view;
   state.editFillId=null; state._addError=null; state._arm=null;
   state.uiRename=false; state.uiDelCar=false; state.uiAddName=null; state.uiAddAccent=null;
-  state.svcEditId=null; state._svcDraft=null; state._svcFiles=null; state._svcBusy=false; state._svcError=null;
+  state.svcEditId=null; state._svcDraft=null; state._svcFiles=null; state._svcBusy=false; state._svcError=null; state._camError=null;
   state.uiPhotoId=null; state.uiPhotoCleared=false; state._photoBusy=false; state._draft=null;
   state._pendingImport=null; state._pendingPhotos=null; state._importError=null;
   save(); render();
@@ -1213,10 +1215,10 @@ function bind(){
   // === фото заправки ===
   const photoCam=document.getElementById("photo-cam");
   if(photoCam) photoCam.onclick=()=>{
-    feedback();
+    feedback(); state._camError=null;
     const cb=(blob)=>savePhotoBlob(blob);
     cb.fallback=()=>{ const i=document.getElementById("photo-file-cam"); if(i) i.click(); };
-    if(!openCamera(cb)){ const i=document.getElementById("photo-file-cam"); if(i) i.click(); }
+    openCamera(cb);
   };
   const photoGal=document.getElementById("photo-gal");
   if(photoGal) photoGal.onclick=()=>{ feedback(); document.getElementById("photo-file-gal").click(); };
@@ -1248,10 +1250,10 @@ function bind(){
   });
   const sCam=document.getElementById("svc-cam");
   if(sCam) sCam.onclick=()=>{
-    feedback();
+    feedback(); state._camError=null;
     const cb=(blob)=>saveSvcBlob(blob);
     cb.fallback=()=>{ const i=document.getElementById("svc-file-cam"); if(i) i.click(); };
-    if(!openCamera(cb)){ const i=document.getElementById("svc-file-cam"); if(i) i.click(); }
+    openCamera(cb);
   };
   const sGal=document.getElementById("svc-gal");
   if(sGal) sGal.onclick=()=>{ feedback(); document.getElementById("svc-file-gal").click(); };
@@ -1381,9 +1383,28 @@ function delFill(id){
 /* Вибір фото: стискаємо, зберігаємо в IndexedDB, показуємо.
    Перед перемальовуванням стягуємо введені поля в state, щоб не втратити їх. */
 /* Вбудована камера через getUserMedia. onShot(blob) — колбек зі знятим кадром.
-   Повертає true, якщо камеру вдалось запустити; false — щоб викликач зробив фолбек. */
+   Спершу запитуємо потік, і лише після успіху будуємо інтерфейс — щоб ніщо
+   (зокрема зміна history) не заважало запиту дозволу на новіших Chrome. */
 function openCamera(onShot){
-  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return false;
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    if(typeof onShot.fallback==="function") onShot.fallback();
+    return;
+  }
+  const constraints = {video:{facingMode:"environment"}, audio:false};
+  navigator.mediaDevices.getUserMedia(constraints)
+    .then(stream=> buildCamera(stream, onShot))
+    .catch(()=>{
+      // друга спроба без вимоги задньої камери (деякі пристрої вибагливі)
+      navigator.mediaDevices.getUserMedia({video:true, audio:false})
+        .then(stream=> buildCamera(stream, onShot))
+        .catch(err=>{
+          const name = (err && err.name) || "помилка";
+          state._camError = "Камера недоступна ("+name+"). Спробуй «🖼️ З галереї» — там теж можна зняти нове фото.";
+          render();
+        });
+    });
+}
+function buildCamera(stream, onShot){
   const ov=document.createElement("div");
   ov.className="cam-overlay";
   ov.innerHTML=`
@@ -1394,14 +1415,9 @@ function openCamera(onShot){
       <div style="width:96px"></div>
     </div>`;
   const video=ov.querySelector("video");
-  let stream=null, closed=false;
-  const stop=()=>{ if(stream) stream.getTracks().forEach(t=>t.stop()); };
-  const close=()=>{
-    if(closed) return; closed=true;
-    stop(); if(ov.parentNode) document.body.removeChild(ov);
-    if(history.state && history.state.cam) history.back();
-    window.removeEventListener("popstate", onPop);
-  };
+  let closed=false;
+  const stop=()=>{ try{ stream.getTracks().forEach(t=>t.stop()); }catch(e){} };
+  const close=()=>{ if(closed)return; closed=true; stop(); if(ov.parentNode) document.body.removeChild(ov); window.removeEventListener("popstate", onPop); };
   const onPop=()=>{ closed=true; stop(); if(ov.parentNode) document.body.removeChild(ov); };
   ov.querySelector(".cam-cancel").onclick=close;
   ov.querySelector(".cam-shot").onclick=()=>{
@@ -1411,13 +1427,11 @@ function openCamera(onShot){
     c.getContext("2d").drawImage(video,0,0);
     c.toBlob(b=>{ feedback(); close(); if(b) onShot(b); }, "image/jpeg", 0.9);
   };
-  history.pushState({cam:true}, "");
-  window.addEventListener("popstate", onPop);
   document.body.appendChild(ov);
-  navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:"environment"}}, audio:false})
-    .then(s=>{ if(closed){ s.getTracks().forEach(t=>t.stop()); return; } stream=s; video.srcObject=s; })
-    .catch(()=>{ close(); /* дозвіл відхилено або немає камери — викличемо фолбек */ if(typeof onShot.fallback==="function") onShot.fallback(); });
-  return true;
+  video.srcObject=stream;
+  video.play && video.play().catch(()=>{});
+  window.addEventListener("popstate", onPop);
+  history.pushState({cam:true}, "");
 }
 
 function onPhotoPick(e){
