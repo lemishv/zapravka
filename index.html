@@ -250,6 +250,19 @@ svg{display:block;width:100%;height:auto;}
   padding:10px 16px;margin:0 0 18px;border-left:5px solid var(--grass);
   background:var(--surface);border-radius:0 12px 12px 0;
 }
+
+/* фото заправки */
+.photo-box{display:flex;flex-direction:column;align-items:flex-start;}
+.photo-thumb{
+  width:100%;max-height:240px;object-fit:cover;border-radius:14px;
+  border:1px solid var(--line);box-shadow:var(--shadow-sm);cursor:pointer;background:var(--surface-2);
+}
+.photo-overlay{
+  position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.92);
+  display:flex;align-items:center;justify-content:center;padding:16px;cursor:pointer;
+}
+.photo-overlay img{max-width:100%;max-height:100%;border-radius:8px;}
+.photo-flag{margin-left:6px;opacity:.7;}
 </style>
 </head>
 <body>
@@ -272,12 +285,126 @@ let state = load();
 function load(){
   try{
     const raw = localStorage.getItem(STORE_KEY);
-    if(raw){ const s = JSON.parse(raw); if(s && s.cars){ s._arm=null; s.uiRename=false; s.uiDelCar=false; s.uiAddName=null; s.uiAddAccent=null; s._pendingImport=null; s._importError=null; s._addError=null; if(s.view==="addcar"||s.view==="settings")s.view="cars"; return s; } }
+    if(raw){ const s = JSON.parse(raw); if(s && s.cars){ s._arm=null; s.uiRename=false; s.uiDelCar=false; s.uiAddName=null; s.uiAddAccent=null; s.uiPhotoId=null; s.uiPhotoCleared=false; s._photoBusy=false; s._pendingImport=null; s._pendingPhotos=null; s._importError=null; s._addError=null; if(s.view==="addcar"||s.view==="settings")s.view="cars"; return s; } }
   }catch(e){}
   return { schemaVersion:1, theme:"dark", activeCarId:null, view:"cars", cars:[] };
 }
 function save(){
   try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){}
+}
+
+/* ---------- Сховище фото (IndexedDB) ----------
+   Дрібні дані (авто, заправки) лишаються в localStorage. Фото — важкі,
+   тому їх тримаємо в IndexedDB, де є гігабайти місця. Один store "photos":
+   ключ — id фото, значення — стиснутий JPEG (Blob). */
+const PHOTO_DB = "zapravka_photos", PHOTO_STORE = "photos";
+let _photoDB = null;
+function photoDB(){
+  if(_photoDB) return Promise.resolve(_photoDB);
+  return new Promise((res,rej)=>{
+    try{
+      const r = indexedDB.open(PHOTO_DB, 1);
+      r.onupgradeneeded = ()=>{ const db=r.result; if(!db.objectStoreNames.contains(PHOTO_STORE)) db.createObjectStore(PHOTO_STORE); };
+      r.onsuccess = ()=>{ _photoDB=r.result; res(_photoDB); };
+      r.onerror = ()=>rej(r.error);
+    }catch(e){ rej(e); }
+  });
+}
+function photoPut(id, blob){
+  return photoDB().then(db=>new Promise((res,rej)=>{
+    const tx=db.transaction(PHOTO_STORE,"readwrite");
+    tx.objectStore(PHOTO_STORE).put(blob, id);
+    tx.oncomplete=()=>res(true); tx.onerror=()=>rej(tx.error);
+  }));
+}
+function photoGet(id){
+  return photoDB().then(db=>new Promise((res,rej)=>{
+    const tx=db.transaction(PHOTO_STORE,"readonly");
+    const rq=tx.objectStore(PHOTO_STORE).get(id);
+    rq.onsuccess=()=>res(rq.result||null); rq.onerror=()=>rej(rq.error);
+  }));
+}
+function photoDel(id){
+  return photoDB().then(db=>new Promise((res)=>{
+    const tx=db.transaction(PHOTO_STORE,"readwrite");
+    tx.objectStore(PHOTO_STORE).delete(id);
+    tx.oncomplete=()=>res(true); tx.onerror=()=>res(false);
+  })).catch(()=>{});
+}
+
+/* Запит постійного сховища (щоб система не очищала дані під браком пам'яті).
+   На Android працює надійно; на iOS — за наявності, повторюємо при старті. */
+function requestPersist(){
+  try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}
+}
+
+/* ---------- ZIP (метод STORE, без стиснення) ----------
+   Власна мінімальна реалізація: фото вже JPEG, тож компресія не потрібна.
+   Архіви сумісні зі звичайними розпакувальниками. */
+const _crcTable=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);t[n]=c>>>0;}return t;})();
+function crc32(b){let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=_crcTable[(c^b[i])&0xFF]^(c>>>8);return (c^0xFFFFFFFF)>>>0;}
+function strToBytes(s){return new TextEncoder().encode(s);}
+function bytesToStr(b){return new TextDecoder().decode(b);}
+function zipStore(files){
+  const chunks=[],central=[];let offset=0;
+  for(const f of files){
+    const nameBytes=strToBytes(f.name),data=f.data,crc=crc32(data),size=data.length;
+    const lh=new DataView(new ArrayBuffer(30));
+    lh.setUint32(0,0x04034b50,true);lh.setUint16(4,20,true);lh.setUint16(6,0,true);lh.setUint16(8,0,true);
+    lh.setUint16(10,0,true);lh.setUint16(12,0x21,true);lh.setUint32(14,crc,true);lh.setUint32(18,size,true);
+    lh.setUint32(22,size,true);lh.setUint16(26,nameBytes.length,true);lh.setUint16(28,0,true);
+    chunks.push(new Uint8Array(lh.buffer),nameBytes,data);
+    const ch=new DataView(new ArrayBuffer(46));
+    ch.setUint32(0,0x02014b50,true);ch.setUint16(4,20,true);ch.setUint16(6,20,true);ch.setUint16(8,0,true);
+    ch.setUint16(10,0,true);ch.setUint16(12,0,true);ch.setUint16(14,0x21,true);ch.setUint32(16,crc,true);
+    ch.setUint32(20,size,true);ch.setUint32(24,size,true);ch.setUint16(28,nameBytes.length,true);
+    ch.setUint16(30,0,true);ch.setUint16(32,0,true);ch.setUint16(34,0,true);ch.setUint16(36,0,true);
+    ch.setUint32(38,0,true);ch.setUint32(42,offset,true);
+    central.push(new Uint8Array(ch.buffer),nameBytes);
+    offset+=30+nameBytes.length+size;
+  }
+  let cdSize=0;for(const c of central)cdSize+=c.length;
+  const eocd=new DataView(new ArrayBuffer(22));
+  eocd.setUint32(0,0x06054b50,true);eocd.setUint16(4,0,true);eocd.setUint16(6,0,true);
+  eocd.setUint16(8,files.length,true);eocd.setUint16(10,files.length,true);
+  eocd.setUint32(12,cdSize,true);eocd.setUint32(16,offset,true);eocd.setUint16(20,0,true);
+  const all=[...chunks,...central,new Uint8Array(eocd.buffer)];
+  let total=0;for(const a of all)total+=a.length;
+  const out=new Uint8Array(total);let p=0;for(const a of all){out.set(a,p);p+=a.length;}
+  return out;
+}
+function unzipStore(buf){
+  const bytes=buf instanceof Uint8Array?buf:new Uint8Array(buf);
+  const dv=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
+  const files=[];let p=0;
+  while(p+4<=bytes.length){
+    if(dv.getUint32(p,true)!==0x04034b50) break;
+    const compSize=dv.getUint32(p+18,true),nameLen=dv.getUint16(p+26,true),extraLen=dv.getUint16(p+28,true);
+    const name=bytesToStr(bytes.subarray(p+30,p+30+nameLen));
+    const dataStart=p+30+nameLen+extraLen;
+    files.push({name, data:new Uint8Array(bytes.subarray(dataStart,dataStart+compSize))});
+    p=dataStart+compSize;
+  }
+  return files;
+}
+function isZip(bytes){ return bytes.length>=2 && bytes[0]===0x50 && bytes[1]===0x4B; }
+
+/* Стиснення фото: вписуємо в макс. сторону, JPEG. Повертає Blob. */
+function compressImage(file, maxSide, quality){
+  maxSide = maxSide||1280; quality = quality||0.8;
+  return new Promise((res,rej)=>{
+    const img=new Image();
+    img.onload=()=>{
+      let {width:w,height:h}=img;
+      if(w>h && w>maxSide){ h=Math.round(h*maxSide/w); w=maxSide; }
+      else if(h>=w && h>maxSide){ w=Math.round(w*maxSide/h); h=maxSide; }
+      const c=document.createElement("canvas"); c.width=w; c.height=h;
+      c.getContext("2d").drawImage(img,0,0,w,h);
+      c.toBlob(b=> b?res(b):rej(new Error("toBlob")), "image/jpeg", quality);
+    };
+    img.onerror=()=>rej(new Error("img"));
+    img.src=URL.createObjectURL(file);
+  });
 }
 
 /* ---------- Допоміжні ---------- */
@@ -637,6 +764,18 @@ function viewAdd(){
     <input id="f-date" type="datetime-local" style="font-size:20px" value="${v.date}">
   </div>
 
+  <div class="field">
+    <label>Фото чека або колонки</label>
+    ${ currentPhotoId(editing)
+      ? `<div class="photo-box">
+           <img class="photo-thumb" data-photo="${currentPhotoId(editing)}" data-photo-view="${currentPhotoId(editing)}" alt="фото">
+           <button class="btn btn-ghost" id="photo-remove" style="margin-top:10px">Прибрати фото</button>
+         </div>`
+      : `<button class="btn btn-ghost" id="photo-add">+ Додати фото</button>
+         <input type="file" id="photo-file" accept="image/*" style="display:none">` }
+    ${ state._photoBusy ? `<div class="hint">Обробляю фото…</div>` : "" }
+  </div>
+
   <div class="preview" id="preview" style="display:none"></div>
 
   <button class="btn btn-primary" id="save-fill">${editing?'Зберегти зміни':'Зберегти'}</button>
@@ -644,6 +783,13 @@ function viewAdd(){
       ? `<button class="btn btn-danger" data-del-fill="${editing.id}">Точно видалити?</button>`
       : `<button class="btn btn-ghost" data-arm="fill:${editing.id}" style="color:var(--danger)">Видалити заправку</button>` }</div>`:""}
   ${state._addError?`<div class="preview" style="display:block;border-color:var(--danger);color:var(--danger);margin-top:14px">${esc(state._addError)}</div>`:""}`;
+}
+
+/* Який id фото зараз показувати на екрані: щойно додане (ще не збережене) або вже збережене. */
+function currentPhotoId(editing){
+  if(state.uiPhotoId) return state.uiPhotoId;
+  if(state.uiPhotoCleared) return null;
+  return editing && editing.photo ? editing.photo : null;
 }
 
 /* ----- Екран: історія ----- */
@@ -677,7 +823,7 @@ function viewHistory(){
       return `<div class="hist-item" data-edit="${x.id}">
         <div class="date num">${fmtDate(x.date)}</div>
         <div class="mid">
-          <div class="o">${fmt(x.odometer,0)} км</div>
+          <div class="o">${fmt(x.odometer,0)} км${x.photo?'<span class="photo-flag">📷</span>':''}</div>
           <div class="lc">${fmt(x.liters,2)} л · ${fmt(x.cost,2)} €</div>
           ${x.full?"":'<span class="tag">частковий долив</span>'}
         </div>
@@ -726,10 +872,10 @@ function viewData(){
 
   <div class="btn-row"><button class="btn btn-ghost" id="exp-json">Зберегти копію</button><button class="btn btn-ghost" id="exp-csv">Експорт CSV</button></div>
   <button class="btn btn-ghost" id="imp-json">Відновити з копії</button>
-  <div style="color:var(--text-dim);font-size:12px;margin:8px 4px 0;line-height:1.5">Копія — повний файл усіх авто для відновлення в додатку. CSV — таблиця для перегляду в Excel чи Таблицях.</div>
-  <input type="file" id="imp-file" accept="application/json,.json" style="display:none">
+  <div style="color:var(--text-dim);font-size:12px;margin:8px 4px 0;line-height:1.5">Копія (ZIP) — повний бекап усіх авто, заправок і фото для відновлення в додатку. CSV — таблиця цифр для Excel чи Таблиць (без фото).</div>
+  <input type="file" id="imp-file" accept=".zip,.json,application/zip,application/json" style="display:none">
   ${ state._pendingImport ? `
-    <div class="preview" style="display:block;margin-top:12px">Файл прочитано: <b>${state._pendingImport.cars.length}</b> авто. Замінити поточні дані?</div>
+    <div class="preview" style="display:block;margin-top:12px">Файл прочитано: <b>${state._pendingImport.cars.length}</b> авто${(state._pendingPhotos&&state._pendingPhotos.length)?`, <b>${state._pendingPhotos.length}</b> фото`:""}. Замінити поточні дані?</div>
     <div class="btn-row"><button class="btn btn-ghost" id="imp-cancel">Скасувати</button><button class="btn btn-primary" id="imp-confirm">Замінити</button></div>` : "" }
   ${ state._importError ? `<div class="preview" style="display:block;border-color:var(--danger);color:var(--danger);margin-top:12px">${esc(state._importError)}</div>` : "" }
 
@@ -798,7 +944,8 @@ function go(view){
   state.view=view;
   state.editFillId=null; state._addError=null; state._arm=null;
   state.uiRename=false; state.uiDelCar=false; state.uiAddName=null; state.uiAddAccent=null;
-  state._pendingImport=null; state._importError=null;
+  state.uiPhotoId=null; state.uiPhotoCleared=false; state._photoBusy=false;
+  state._pendingImport=null; state._pendingPhotos=null; state._importError=null;
   save(); render();
 }
 
@@ -851,7 +998,9 @@ function bind(){
 
   // редагувати заправку (з історії)
   document.querySelectorAll("[data-edit]").forEach(el=>el.onclick=()=>{
-    feedback(); state.editFillId=el.dataset.edit; state.view="add"; state._addError=null; save(); render();
+    feedback(); state.editFillId=el.dataset.edit; state.view="add"; state._addError=null;
+    state.uiPhotoId=null; state.uiPhotoCleared=false; state._photoBusy=false;
+    save(); render();
   });
 
   // === екран додавання заправки ===
@@ -873,11 +1022,25 @@ function bind(){
 
   if(document.getElementById("toggle-full")) updatePreview();
 
+  // === фото заправки ===
+  const photoAdd=document.getElementById("photo-add");
+  if(photoAdd) photoAdd.onclick=()=>{ feedback(); document.getElementById("photo-file").click(); };
+  const photoFile=document.getElementById("photo-file");
+  if(photoFile) photoFile.onchange=onPhotoPick;
+  const photoRemove=document.getElementById("photo-remove");
+  if(photoRemove) photoRemove.onclick=()=>{ feedback(); state.uiPhotoId=null; state.uiPhotoCleared=true; render(); };
+  // підвантаження мініатюр з IndexedDB (асинхронно, після рендера)
+  document.querySelectorAll("img[data-photo]").forEach(img=>{
+    photoGet(img.dataset.photo).then(blob=>{ if(blob) img.src=URL.createObjectURL(blob); }).catch(()=>{});
+  });
+  // перегляд фото на весь екран
+  document.querySelectorAll("[data-photo-view]").forEach(el=>el.onclick=()=>{ feedback(); openPhoto(el.dataset.photoView); });
+
   // === дані (експорт/імпорт) ===
-  const ej=document.getElementById("exp-json"); if(ej) ej.onclick=exportJSON;
+  const ej=document.getElementById("exp-json"); if(ej) ej.onclick=exportZip;
   const ec=document.getElementById("exp-csv");  if(ec) ec.onclick=exportCSV;
   const ij=document.getElementById("imp-json"); if(ij) ij.onclick=()=>document.getElementById("imp-file").click();
-  const ifile=document.getElementById("imp-file"); if(ifile) ifile.onchange=importJSON;
+  const ifile=document.getElementById("imp-file"); if(ifile) ifile.onchange=importBackup;
 
   const rn=document.getElementById("rename-car");
   if(rn) rn.onclick=()=>{ feedback(); state.uiRename=true; render(); setTimeout(()=>{const i=document.getElementById("rename-input"); if(i)i.focus();},50); };
@@ -903,9 +1066,9 @@ function bind(){
 
   // підтвердження імпорту (інлайн)
   const impC=document.getElementById("imp-confirm");
-  if(impC) impC.onclick=()=>{ state=state._pendingImport; state.view="cars"; feedback(); save(); render(); };
+  if(impC) impC.onclick=applyImport;
   const impX=document.getElementById("imp-cancel");
-  if(impX) impX.onclick=()=>{ state._pendingImport=null; render(); };
+  if(impX) impX.onclick=()=>{ state._pendingImport=null; state._pendingPhotos=null; render(); };
 }
 
 function readForm(){
@@ -966,16 +1129,46 @@ function saveFill(){
   }
   if(state.editFillId){
     const f=car.fills.find(x=>x.id===state.editFillId);
+    const oldPhoto=f.photo||null;
     Object.assign(f,d);
+    // застосовуємо зміни фото
+    if(state.uiPhotoId){ f.photo=state.uiPhotoId; if(oldPhoto && oldPhoto!==state.uiPhotoId) photoDel(oldPhoto); }
+    else if(state.uiPhotoCleared){ f.photo=null; if(oldPhoto) photoDel(oldPhoto); }
   }else{
-    car.fills.push({id:uid(), photo:null, isBaseline:false, ...d}); // photo:null — місце для майбутніх фото
+    car.fills.push({id:uid(), photo:state.uiPhotoId||null, isBaseline:false, ...d});
   }
+  state.uiPhotoId=null; state.uiPhotoCleared=false;
   feedback(); state.editFillId=null; state._addError=null; save(); go("car");
 }
 function delFill(id){
   const car=activeCar(); if(!car) return;
+  const f=car.fills.find(x=>x.id===id);
+  if(f && f.photo) photoDel(f.photo);
   car.fills=car.fills.filter(x=>x.id!==id);
   disarm(); state.editFillId=null; save(); go("history");
+}
+
+/* Вибір фото: стискаємо, зберігаємо в IndexedDB, показуємо. */
+function onPhotoPick(e){
+  const file=e.target.files && e.target.files[0]; if(!file) return;
+  state._photoBusy=true; render();
+  compressImage(file,1280,0.8)
+    .then(blob=>{ const id="ph_"+uid(); return photoPut(id,blob).then(()=>id); })
+    .then(id=>{ state.uiPhotoId=id; state.uiPhotoCleared=false; state._photoBusy=false; feedback(); render(); })
+    .catch(()=>{ state._photoBusy=false; state._addError="Не вдалося обробити фото."; render(); });
+}
+
+/* Перегляд фото на весь екран (DOM-оверлей поза рендером). */
+function openPhoto(id){
+  photoGet(id).then(blob=>{
+    if(!blob) return;
+    const url=URL.createObjectURL(blob);
+    const ov=document.createElement("div");
+    ov.className="photo-overlay";
+    ov.innerHTML=`<img src="${url}" alt="фото">`;
+    ov.onclick=()=>{ document.body.removeChild(ov); URL.revokeObjectURL(url); };
+    document.body.appendChild(ov);
+  }).catch(()=>{});
 }
 
 /* ---------- Експорт / імпорт ---------- */
@@ -986,9 +1179,28 @@ function download(name, content, type){
   a.href=url; a.download=name; a.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
-function exportJSON(){
+/* Чисті дані для бекапу — без тимчасових UI-прапорців. */
+function cleanState(){
+  return { schemaVersion:state.schemaVersion||1, theme:state.theme, activeCarId:state.activeCarId, cars:state.cars };
+}
+/* Усі id фото, які зараз використовуються. */
+function usedPhotoIds(){
+  const ids=[];
+  state.cars.forEach(c=>c.fills.forEach(f=>{ if(f.photo) ids.push(f.photo); }));
+  return ids;
+}
+/* Зберегти копію: ZIP з data.json + photos/. */
+function exportZip(){
   feedback();
-  download(`zapravka-backup-${new Date().toISOString().slice(0,10)}.json`, JSON.stringify(state,null,2), "application/json");
+  const dataBytes = strToBytes(JSON.stringify(cleanState(),null,2));
+  const files = [{name:"data.json", data:dataBytes}];
+  const ids = usedPhotoIds();
+  Promise.all(ids.map(id=>photoGet(id).then(blob=>blob?blob.arrayBuffer().then(ab=>({id,ab})):null).catch(()=>null)))
+    .then(results=>{
+      results.forEach(r=>{ if(r) files.push({name:`photos/${r.id}.jpg`, data:new Uint8Array(r.ab)}); });
+      const zip = zipStore(files);
+      download(`zapravka-backup-${new Date().toISOString().slice(0,10)}.zip`, zip, "application/zip");
+    });
 }
 function exportCSV(){
   feedback();
@@ -1000,24 +1212,49 @@ function exportCSV(){
   });
   download(`zapravka-${new Date().toISOString().slice(0,10)}.csv`, "\uFEFF"+rows.join("\n"), "text/csv");
 }
-function importJSON(e){
+/* Відновлення: приймає і .zip (дані+фото), і старий .json (лише дані). */
+function importBackup(e){
   const file=e.target.files[0]; if(!file) return;
   const r=new FileReader();
   r.onload=()=>{
     try{
-      const data=JSON.parse(r.result);
-      if(!data || !Array.isArray(data.cars)) throw 0;
-      state._pendingImport=data; state._importError=null; render();
+      const bytes=new Uint8Array(r.result);
+      if(isZip(bytes)){
+        const entries=unzipStore(bytes);
+        const dataEntry=entries.find(x=>x.name==="data.json");
+        if(!dataEntry) throw 0;
+        const data=JSON.parse(bytesToStr(dataEntry.data));
+        if(!data || !Array.isArray(data.cars)) throw 0;
+        // фото з архіву — у тимчасове, застосуємо при підтвердженні
+        const photos=entries.filter(x=>x.name.indexOf("photos/")===0 && !x.name.endsWith("/"))
+          .map(x=>({id:x.name.replace("photos/","").replace(/\.jpg$/,""), data:x.data}));
+        state._pendingImport=data; state._pendingPhotos=photos; state._importError=null; render();
+      } else {
+        const data=JSON.parse(bytesToStr(bytes));
+        if(!data || !Array.isArray(data.cars)) throw 0;
+        state._pendingImport=data; state._pendingPhotos=[]; state._importError=null; render();
+      }
     }catch(err){ state._importError="Не вдалося прочитати файл."; render(); }
   };
-  r.readAsText(file);
+  r.readAsArrayBuffer(file);
   e.target.value="";
+}
+/* Застосувати відновлення: дані → localStorage, фото → IndexedDB. */
+function applyImport(){
+  const data=state._pendingImport, photos=state._pendingPhotos||[];
+  Promise.all(photos.map(p=>photoPut(p.id, new Blob([p.data],{type:"image/jpeg"})).catch(()=>{})))
+    .then(()=>{
+      state=Object.assign({view:"cars"}, data);
+      feedback(); save(); render();
+    });
 }
 
 function esc(s){ return String(s).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m])); }
 
 /* ---------- Старт ---------- */
 if(!state.view) state.view="cars";
+requestPersist();
+photoDB().catch(()=>{}); // прогрів сховища фото
 render();
 </script>
 <script>
