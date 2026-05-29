@@ -18,15 +18,18 @@
 /* ===== Тема: змінні ===== */
 :root[data-theme="dark"]{
   --bg:#0a0a0a;
-  --surface:#151515;
-  --surface-2:#1e1e1e;
-  --line:#2a2a2a;
+  --surface:#232323;
+  --surface-2:#141414;
+  --line:#383838;
   --text:#f0ebe3;
   --text-dim:#8a8378;
-  --grass:#84b94a;
-  --grass-bright:#a6d65e;
+  --grass:#4fa238;
+  --grass-bright:#71c457;
+  --grass-ink:#0a0a0a;
   --danger:#c97a6a;
-  --shadow:0 8px 24px rgba(0,0,0,.45);
+  --shadow:0 1px 0 rgba(255,255,255,.10) inset, 0 2px 5px rgba(0,0,0,.5), 0 12px 26px rgba(0,0,0,.6);
+  --shadow-sm:0 1px 0 rgba(255,255,255,.09) inset, 0 2px 6px rgba(0,0,0,.5);
+  --inset:inset 0 2px 6px rgba(0,0,0,.75), inset 0 -1px 0 rgba(255,255,255,.05);
 }
 :root[data-theme="light"]{
   --bg:#f3efe8;
@@ -35,10 +38,13 @@
   --line:#ddd3c4;
   --text:#1f1b14;
   --text-dim:#7a7060;
-  --grass:#5e8c2c;
-  --grass-bright:#3f6618;
+  --grass:#4fa238;
+  --grass-bright:#3f7d28;
+  --grass-ink:#0a0a0a;
   --danger:#b4503c;
-  --shadow:0 6px 18px rgba(60,40,10,.12);
+  --shadow:0 1px 0 rgba(255,255,255,.7) inset, 0 2px 5px rgba(90,70,30,.10), 0 10px 22px rgba(90,70,30,.13);
+  --shadow-sm:0 1px 0 rgba(255,255,255,.7) inset, 0 2px 6px rgba(90,70,30,.10);
+  --inset:inset 0 2px 5px rgba(90,70,30,.16), inset 0 -1px 0 rgba(255,255,255,.6);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 html,body{margin:0;padding:0;}
@@ -97,6 +103,7 @@ body{
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
 .stat{
   background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px 18px;
+  box-shadow:var(--shadow-sm);
 }
 .stat .label{color:var(--text-dim);font-size:13px;}
 .stat .value{font-family:'Fraunces',serif;font-size:30px;font-weight:500;margin-top:6px;line-height:1;}
@@ -106,7 +113,7 @@ body{
   font-family:'JetBrains Mono';color:var(--text-dim);font-size:13px;
   text-transform:uppercase;letter-spacing:1.5px;margin:24px 4px 12px;
 }
-.panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden;}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:var(--shadow-sm);}
 .panel .row{display:flex;justify-content:space-between;align-items:baseline;padding:14px 18px;border-bottom:1px solid var(--line);}
 .panel .row:last-child{border-bottom:none;}
 .panel .row .k{color:var(--text-dim);font-size:14px;}
@@ -121,8 +128,9 @@ body{
   transition:transform .1s,opacity .2s;
 }
 .btn:active{transform:scale(.97);}
-.btn-primary{background:var(--grass);color:#0a0a0a;}
-.btn-ghost{background:var(--surface);color:var(--text);border:1px solid var(--line);}
+.btn-primary{background:var(--grass);color:var(--grass-ink);box-shadow:var(--shadow);transition:transform .1s,opacity .2s,background-color .35s ease,color .35s ease,box-shadow .1s;}
+.btn-primary:active{box-shadow:var(--shadow-sm);}
+.btn-ghost{background:var(--surface);color:var(--text);border:1px solid var(--line);box-shadow:var(--shadow-sm);}
 .btn-danger{background:transparent;color:var(--danger);border:1px solid var(--danger);}
 .btn-row{display:flex;gap:12px;margin-bottom:12px;}
 .btn-row .btn{flex:1;}
@@ -134,7 +142,7 @@ body{
 .field input{
   width:100%;background:var(--surface-2);border:2px solid var(--line);border-radius:16px;
   color:var(--text);font-family:'Fraunces',serif;font-size:30px;font-weight:500;
-  padding:16px 20px;outline:none;transition:border-color .2s;
+  padding:16px 20px;outline:none;transition:border-color .2s;box-shadow:var(--inset);
 }
 .field input:focus{border-color:var(--grass);}
 .field .hint{color:var(--text-dim);font-size:12px;margin:6px 4px 0;}
@@ -143,27 +151,27 @@ body{
 .toggle-row{
   display:flex;align-items:center;justify-content:space-between;gap:14px;
   background:var(--surface);border:1px solid var(--line);border-radius:16px;
-  padding:16px 18px;margin-bottom:18px;cursor:pointer;
+  padding:16px 18px;margin-bottom:18px;cursor:pointer;box-shadow:var(--shadow-sm);
 }
 .toggle-row .t-label{font-size:16px;}
 .toggle-row .t-sub{color:var(--text-dim);font-size:12px;margin-top:3px;}
-.switch{width:58px;height:34px;border-radius:20px;background:var(--line);position:relative;flex:none;transition:background .2s;}
-.switch::after{content:"";position:absolute;top:3px;left:3px;width:28px;height:28px;border-radius:50%;background:#fff;transition:transform .2s;}
+.switch{width:58px;height:34px;border-radius:20px;background:var(--line);position:relative;flex:none;transition:background .2s;box-shadow:var(--inset);}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:28px;height:28px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 2px 4px rgba(0,0,0,.4);}
 .toggle-row.on .switch{background:var(--grass);}
 .toggle-row.on .switch::after{transform:translateX(24px);}
 
 /* живий прев'ю */
 .preview{
   background:var(--surface-2);border:1px dashed var(--grass);border-radius:16px;
-  padding:14px 18px;margin-bottom:18px;text-align:center;color:var(--text-dim);font-size:14px;
+  padding:14px 18px;margin-bottom:18px;text-align:center;color:var(--text-dim);font-size:14px;box-shadow:var(--inset);
 }
 .preview b{font-family:'Fraunces',serif;color:var(--grass-bright);font-size:22px;font-weight:500;}
 
 /* ===== Історія ===== */
 .hist-item{
-  background:var(--surface);border:1px solid var(--line);border-radius:16px;
+  background:var(--surface-2);border:1px solid var(--line);border-radius:16px;
   padding:15px 18px;margin-bottom:10px;display:flex;align-items:center;gap:14px;cursor:pointer;
-  transition:transform .1s;
+  transition:transform .1s;box-shadow:var(--inset);
 }
 .hist-item:active{transform:scale(.99);}
 .hist-item .date{font-family:'Fraunces',serif;font-size:18px;min-width:58px;}
@@ -172,10 +180,10 @@ body{
 .hist-item .mid .lc{font-size:15px;margin-top:2px;}
 .hist-item .l100{text-align:right;font-family:'Fraunces',serif;font-size:24px;color:var(--grass-bright);}
 .hist-item .l100 small{display:block;font-family:'JetBrains Mono';font-size:10px;color:var(--text-dim);}
-.tag{display:inline-block;background:var(--surface-2);color:var(--text-dim);font-size:11px;padding:3px 9px;border-radius:8px;margin-top:4px;}
+.tag{display:inline-block;background:var(--surface);color:var(--text-dim);font-size:11px;padding:3px 9px;border-radius:8px;margin-top:4px;}
 
 /* ===== Графіки ===== */
-.chart-card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px 14px;margin-bottom:16px;}
+.chart-card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px 14px;margin-bottom:16px;box-shadow:var(--shadow-sm);}
 .chart-card .ct{font-family:'JetBrains Mono';color:var(--text-dim);font-size:13px;margin:0 4px 12px;text-transform:uppercase;letter-spacing:1px;}
 svg{display:block;width:100%;height:auto;}
 
@@ -190,7 +198,7 @@ svg{display:block;width:100%;height:auto;}
 /* ===== Компактний дашборд: усе на один екран ===== */
 .dash{
   display:flex;flex-direction:column;
-  min-height:calc(100dvh - 44px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  min-height:calc(100svh - 44px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
 }
 .dash .topbar{margin-bottom:12px;min-height:40px;}
 .dash .topbar h1{font-size:26px;}
@@ -200,7 +208,7 @@ svg{display:block;width:100%;height:auto;}
 .dash .hero .label{font-size:13px;}
 .dash .hero .value{font-size:46px;margin:2px 0 2px;}
 .dash .hero .unit{font-size:13px;}
-.dash .topnav{gap:10px;margin-bottom:12px;}
+.dash .topnav{gap:8px;margin-bottom:12px;}
 .dash .navbtn{flex:1;min-height:44px;font-size:16px;border-radius:13px;}
 .dash .grid{gap:10px;margin-bottom:10px;}
 .dash .stat{padding:11px 14px;border-radius:14px;}
@@ -209,10 +217,9 @@ svg{display:block;width:100%;height:auto;}
 .dash .panel{border-radius:14px;}
 .dash .panel .row{padding:8px 16px;}
 .dash .panel .row .v{font-size:17px;}
-.dash .dock{margin-top:auto;}
-.dash .dock .btn{min-height:54px;font-size:17px;}
-.dash .dock .btn-row{margin-bottom:10px;}
-.dash .dock .big-add{min-height:78px;font-size:22px;border-radius:18px;}
+/* док тягнеться на весь залишок, кнопка заправки заповнює його */
+.dash .dock{margin-top:12px;flex:1;display:flex;}
+.dash .dock .big-add{flex:1;width:100%;min-height:96px;font-size:24px;border-radius:18px;}
 
 /* розділена картка: назва | витрата */
 .hero-split{
@@ -223,34 +230,24 @@ svg{display:block;width:100%;height:auto;}
   flex:0 0 40%;display:flex;align-items:center;padding:14px 18px;
   font-family:'Fraunces',serif;font-size:27px;font-weight:500;line-height:1.05;
   word-break:break-word;border-right:1px solid var(--line);border-left:5px solid var(--grass);
+  transition:border-left-color .35s ease;
 }
 .hs-metric{flex:1;display:flex;flex-direction:column;justify-content:center;text-align:center;padding:12px 8px;}
 .hs-metric .label{color:var(--text-dim);font-size:12px;}
-.hs-metric .value{font-family:'Fraunces',serif;font-variant-numeric:tabular-nums;font-size:50px;font-weight:500;line-height:1;color:var(--grass-bright);margin:3px 0;}
+.hs-metric .value{font-family:'Fraunces',serif;font-variant-numeric:tabular-nums;font-size:50px;font-weight:500;line-height:1;color:var(--grass-bright);margin:3px 0;transition:color .35s ease;}
 .hs-metric .unit{color:var(--text-dim);font-size:12px;}
 
-/* свотчі кольору авто */
-.swatches{display:flex;flex-wrap:wrap;gap:12px;margin:2px 4px 16px;}
-.swatch{width:40px;height:40px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:transform .1s;position:relative;}
+/* свотчі кольору авто — рівно 7 у ряд (2 ряди по 7) */
+.swatches{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;margin:2px 2px 16px;}
+.swatch{aspect-ratio:1;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:transform .1s;position:relative;box-shadow:0 2px 5px rgba(0,0,0,.35),0 1px 0 rgba(255,255,255,.25) inset;}
 .swatch:active{transform:scale(.9);}
 .swatch.sel{border-color:var(--text);}
-.swatch.sel::after{content:"✓";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#0a0a0a;font-size:18px;font-weight:700;}
-
-/* випадний список марки */
-.brand-select{
-  width:100%;background:var(--surface-2);border:2px solid var(--line);border-radius:14px;
-  color:var(--text);font-family:'JetBrains Mono',monospace;font-size:17px;
-  padding:14px 16px;outline:none;-webkit-appearance:none;appearance:none;cursor:pointer;
-  background-image:linear-gradient(45deg,transparent 50%,var(--text-dim) 50%),linear-gradient(135deg,var(--text-dim) 50%,transparent 50%);
-  background-position:calc(100% - 20px) 50%,calc(100% - 14px) 50%;
-  background-size:6px 6px,6px 6px;background-repeat:no-repeat;
-}
-.brand-select.has{border-color:var(--grass);color:var(--grass-bright);}
+.swatch.sel::after{content:"✓";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:17px;font-weight:700;text-shadow:0 0 3px rgba(0,0,0,.7),0 1px 2px rgba(0,0,0,.6);}
 
 /* помітна назва авто в налаштуваннях */
 .settings-carname{
   font-family:'Fraunces',serif;font-size:30px;font-weight:500;line-height:1;
-  padding:10px 16px;margin:0 0 16px;border-left:5px solid var(--grass);
+  padding:10px 16px;margin:0 0 18px;border-left:5px solid var(--grass);
   background:var(--surface);border-radius:0 12px 12px 0;
 }
 </style>
@@ -275,7 +272,7 @@ let state = load();
 function load(){
   try{
     const raw = localStorage.getItem(STORE_KEY);
-    if(raw){ const s = JSON.parse(raw); if(s && s.cars){ s._arm=null; s.uiAddCar=false; s.uiRename=false; s.uiDelCar=false; s.uiAddAccent=null; s._pendingImport=null; s._importError=null; s._addError=null; return s; } }
+    if(raw){ const s = JSON.parse(raw); if(s && s.cars){ s._arm=null; s.uiRename=false; s.uiDelCar=false; s.uiAddName=null; s.uiAddAccent=null; s._pendingImport=null; s._importError=null; s._addError=null; if(s.view==="addcar"||s.view==="settings")s.view="cars"; return s; } }
   }catch(e){}
   return { schemaVersion:1, theme:"dark", activeCarId:null, view:"cars", cars:[] };
 }
@@ -305,54 +302,35 @@ function todayLocalISO(){
   return new Date(d - off).toISOString().slice(0,16); // для input datetime-local
 }
 
-/* Палітра акцентів під колір бренду авто.
-   Кожен — пара: base (основний) + bright (яскравіший для чисел/точок).
-   Усі підібрані так, щоб читались і на темному, і на світлому тлі. */
+/* Палітра кольорів авто: 14 насичених відтінків (2 ряди по 7), названі
+   як художні пігменти. base — основний, bright — яскравіший (числа, точки).
+   Колір тексту кнопки рахується автоматично за яскравістю base. */
 const ACCENTS = [
-  {id:"green",  name:"Зелений",   base:"#6aa84f", bright:"#88c95f"},
-  {id:"blue",   name:"Синій",     base:"#4a90d9", bright:"#6fb0ec"},
-  {id:"red",    name:"Червоний",  base:"#d24a45", bright:"#e7726c"},
-  {id:"amber",  name:"Бурштин",   base:"#cf9b3f", bright:"#e8c060"},
-  {id:"orange", name:"Помаранч",  base:"#dd7a39", bright:"#f09a5c"},
-  {id:"teal",   name:"Бірюза",    base:"#2fa996", bright:"#52cab4"},
-  {id:"violet", name:"Фіолет",    base:"#9163cc", bright:"#b48ce6"},
-  {id:"silver", name:"Срібло",    base:"#9aa0a6", bright:"#c4cacf"}
+  {id:"skoda",    name:"Зелений Škoda",    base:"#4fa238", bright:"#71c457"},
+  {id:"lime",     name:"Травнева зелень",  base:"#7bc62d", bright:"#9be04f"},
+  {id:"teal",     name:"Віридіан",         base:"#15b89a", bright:"#3fd6b8"},
+  {id:"cyan",     name:"Церулеум",         base:"#1bb6e0", bright:"#4ad2f5"},
+  {id:"blue",     name:"Ультрамарин",      base:"#3a8ef0", bright:"#66acff"},
+  {id:"indigo",   name:"Індиго",           base:"#6a6cf0", bright:"#9092ff"},
+  {id:"violet",   name:"Кобальт фіолет",   base:"#a85cf0", bright:"#c488ff"},
+  {id:"magenta",  name:"Маджента",         base:"#d44fd6", bright:"#ec80ee"},
+  {id:"pink",     name:"Марена",           base:"#f0589e", bright:"#ff85bd"},
+  {id:"raspberry",name:"Краплак",          base:"#dc3b6b", bright:"#f56892"},
+  {id:"red",      name:"Кіновар",          base:"#ec4040", bright:"#ff6868"},
+  {id:"orange",   name:"Кадмій",           base:"#f7791e", bright:"#ff9d47"},
+  {id:"gold",     name:"Шафран",           base:"#f5b81f", bright:"#ffd24f"},
+  {id:"yellow",   name:"Лимон",            base:"#ecd417", bright:"#ffe84a"}
 ];
 function accentFor(car){
   if(!car || !car.accent) return null;
-  return ACCENTS.find(a=>a.id===car.accent) || BRANDS.find(b=>b.id===car.accent) || null;
+  return ACCENTS.find(a=>a.id===car.accent) || null;
 }
-
-/* Фірмові пресети марок. Колір — у родині бренду, але приведений до
-   читабельного діапазону (надто темні фірмові відтінки на темному тлі зникають).
-   Тому сині/червоні марки виглядають схоже — розрізняє назва. Список редагований. */
-const BRANDS = [
-  {id:"audi",       name:"Audi",          mark:"A",  base:"#c43530", bright:"#e2615b"},
-  {id:"bmw",        name:"BMW",           mark:"B",  base:"#3d8bd4", bright:"#64aaec"},
-  {id:"citroen",    name:"Citroën",       mark:"C",  base:"#c9352f", bright:"#e5615b"},
-  {id:"dacia",      name:"Dacia",         mark:"D",  base:"#3f7a5e", bright:"#5f9d7d"},
-  {id:"fiat",       name:"Fiat",          mark:"F",  base:"#b03a44", bright:"#d0626c"},
-  {id:"ford",       name:"Ford",          mark:"Fo", base:"#3566b8", bright:"#5a8cdf"},
-  {id:"honda",      name:"Honda",         mark:"H",  base:"#de3b3b", bright:"#f06868"},
-  {id:"hyundai",    name:"Hyundai",       mark:"Hy", base:"#4a82b0", bright:"#6fa6d2"},
-  {id:"kia",        name:"Kia",           mark:"K",  base:"#c23341", bright:"#df5e6b"},
-  {id:"mazda",      name:"Mazda",         mark:"Mz", base:"#cf3a3f", bright:"#ea656a"},
-  {id:"mercedes",   name:"Mercedes-Benz", mark:"M",  base:"#9aa6ad", bright:"#c4ccd2"},
-  {id:"nissan",     name:"Nissan",        mark:"N",  base:"#d23a33", bright:"#e7635b"},
-  {id:"opel",       name:"Opel",          mark:"O",  base:"#e0bb2f", bright:"#f2d655"},
-  {id:"peugeot",    name:"Peugeot",       mark:"P",  base:"#5b7287", bright:"#7d94a9"},
-  {id:"renault",    name:"Renault",       mark:"R",  base:"#e6b327", bright:"#f6d24a"},
-  {id:"seat",       name:"SEAT",          mark:"S",  base:"#d9572f", bright:"#ef7d52"},
-  {id:"skoda",      name:"Škoda",         mark:"Š",  base:"#4fa238", bright:"#71c457"},
-  {id:"tesla",      name:"Tesla",         mark:"T",  base:"#d6322f", bright:"#ea615b"},
-  {id:"toyota",     name:"Toyota",        mark:"Ty", base:"#d8362f", bright:"#ee6259"},
-  {id:"volkswagen", name:"Volkswagen",    mark:"VW", base:"#3a72c4", bright:"#5e94e2"},
-  {id:"volvo",      name:"Volvo",         mark:"V",  base:"#4f7da0", bright:"#74a2c6"}
-];
-function brandBadge(accentId){
-  const b = BRANDS.find(x=>x.id===accentId);
-  if(!b) return "";
-  return `<div class="brand-badge ${b.mark.length>1?'two':''}" style="background:${b.base}">${b.mark}</div>`;
+/* Колір тексту, який читається на даному тлі: темний на світлих відтінках,
+   світлий на темних. Поріг підібраний під великий жирний текст кнопки. */
+function inkFor(hex){
+  const r=parseInt(hex.slice(1,3),16)/255, g=parseInt(hex.slice(3,5),16)/255, b=parseInt(hex.slice(5,7),16)/255;
+  const luma=0.2126*r+0.7152*g+0.0722*b;
+  return luma>=0.55 ? "#0a0a0a" : "#ffffff";
 }
 
 function feedback(){
@@ -427,6 +405,7 @@ function computeStats(car){
   const lastFill = real.length ? real[real.length-1] : null;
   const lastInterval = f.length>=2 ? f[f.length-1].odometer - f[f.length-2].odometer : null;
   const lastSpan = spans.length ? spans[spans.length-1] : null;
+  const totalLiters = real.reduce((s,x)=>s+x.liters,0);
 
   return {
     fillsCount:real.length,
@@ -434,6 +413,7 @@ function computeStats(car){
     avgL100: sDist>0 ? sLit/sDist*100 : null,
     avgKmL:  sLit>0 ? sDist/sLit : null,
     avgEur100: sDist>0 ? sCost/sDist*100 : null,
+    avgPriceL: totalLiters>0 ? totalSpent/totalLiters : null,
     totalDist, totalSpent,
     lastFill, lastInterval, lastSpan,
     spans
@@ -448,23 +428,29 @@ const app = document.getElementById("app");
 function render(){
   const root=document.documentElement;
   root.setAttribute("data-theme", state.theme);
-  // акцент під колір авто (тільки на екранах, що стосуються конкретного авто)
-  const scoped=["car","add","history","charts"].includes(state.view);
+  // акцент під колір авто (на екранах, що стосуються конкретного авто)
+  const scoped=["car","add","history","charts","carsettings"].includes(state.view);
   let a = scoped ? accentFor(activeCar()) : null;
-  // живий прев'ю обраного кольору ще під час створення авто
-  if(!a && state.view==="cars" && state.uiAddCar && state.uiAddAccent) a = accentFor({accent:state.uiAddAccent});
-  if(a){ root.style.setProperty("--grass",a.base); root.style.setProperty("--grass-bright",a.bright); }
-  else { root.style.removeProperty("--grass"); root.style.removeProperty("--grass-bright"); }
+  // живий прев'ю обраного кольору під час створення авто
+  if(!a && state.view==="addcar" && state.uiAddAccent) a = accentFor({accent:state.uiAddAccent});
+  if(a){
+    root.style.setProperty("--grass",a.base);
+    root.style.setProperty("--grass-bright",a.bright);
+    root.style.setProperty("--grass-ink", inkFor(a.base));
+  }
+  else { root.style.removeProperty("--grass"); root.style.removeProperty("--grass-bright"); root.style.removeProperty("--grass-ink"); }
   document.querySelector('meta[name=theme-color]').setAttribute("content", state.theme==="dark" ? "#0a0a0a" : "#f3efe8");
   let html="";
   switch(state.view){
-    case "cars":     html=viewCars(); break;
-    case "car":      html=viewCar(); break;
-    case "add":      html=viewAdd(); break;
-    case "history":  html=viewHistory(); break;
-    case "charts":   html=viewCharts(); break;
-    case "settings": html=viewSettings(); break;
-    default:         html=viewCars();
+    case "cars":        html=viewCars(); break;
+    case "addcar":      html=viewAddCar(); break;
+    case "car":         html=viewCar(); break;
+    case "add":         html=viewAdd(); break;
+    case "history":     html=viewHistory(); break;
+    case "charts":      html=viewCharts(); break;
+    case "carsettings": html=viewCarSettings(); break;
+    case "data":        html=viewData(); break;
+    default:            html=viewCars();
   }
   app.innerHTML = html;
   bind();
@@ -481,7 +467,7 @@ function viewCars(){
       const st = computeStats(c);
       const cc = accentFor(c);
       const spine = cc ? cc.base : "var(--grass)";
-      return `<div class="car-card" data-open="${c.id}" style="border-left-width:5px;border-left-color:${spine}">
+      return `<div class="car-card" data-open="${c.id}" data-longpress="${c.id}" style="border-left-width:5px;border-left-color:${spine}">
         <div>
           <div class="name">${esc(c.name)}</div>
           <div class="sub">${st.fillsCount} заправок</div>
@@ -493,35 +479,43 @@ function viewCars(){
       </div>`;
     }).join("");
   }
+  const themeIcon = state.theme==="dark" ? "☀" : "☾";
   return `
   <div class="topbar">
+    <button class="icon-btn" id="toggle-theme-top" title="Тема">${themeIcon}</button>
     <h1>Заправка</h1>
-    <button class="icon-btn" data-go="settings">⚙</button>
+    <button class="icon-btn" data-go="data" title="Дані">⚙</button>
   </div>
   ${cards}
-  <div class="fab-wrap">${ state.uiAddCar ? `
-    <div class="field" style="margin-bottom:10px"><input id="new-car-name" placeholder="Назва авто" style="font-size:24px"></div>
-    <div class="field" style="margin-bottom:4px"><label>Колір авто</label></div>
-    ${swatchRow(state.uiAddAccent||"green")}
-    ${brandSelect(state.uiAddAccent||"green")}
-    <div class="btn-row" style="margin-top:14px"><button class="btn btn-ghost" id="cancel-car">Скасувати</button><button class="btn btn-primary" id="confirm-car">Додати</button></div>`
-    : `<button class="btn btn-primary" data-add-car>+ Додати авто</button>` }</div>`;
+  ${state.cars.length?`<div style="color:var(--text-dim);font-size:12px;text-align:center;margin:14px 4px 0">Утримай авто, щоб змінити назву чи колір</div>`:""}
+  <div class="fab-wrap"><button class="btn btn-primary" data-go="addcar">+ Додати авто</button></div>`;
 }
 
-/* Рядок свотчів кольору. selId — який зараз вибраний. */
+/* Рядок свотчів кольору (2 ряди по 7). */
 function swatchRow(selId){
   return `<div class="swatches">${ACCENTS.map(a=>
     `<div class="swatch ${a.id===selId?'sel':''}" data-accent="${a.id}" style="background:${a.base}" title="${a.name}"></div>`
   ).join("")}</div>`;
 }
 
-/* Випадний список марок. selId — поточний акцент (може бути марка або колір). */
-function brandSelect(selId){
-  const isBrand = BRANDS.some(b=>b.id===selId);
-  const opts = `<option value="">— або обери марку —</option>` + BRANDS.map(b=>
-    `<option value="${b.id}" ${b.id===selId?'selected':''}>${b.name}</option>`
-  ).join("");
-  return `<select id="brand-select" class="brand-select ${isBrand?'has':''}">${opts}</select>`;
+/* ----- Екран: нове авто (повноекранний) ----- */
+function viewAddCar(){
+  const sel = state.uiAddAccent || "green";
+  const name = state.uiAddName || "";
+  return `
+  <div class="topbar">
+    <button class="icon-btn back" data-go="cars">‹</button>
+    <h1>Нове авто</h1>
+  </div>
+  <div class="field">
+    <label>Назва</label>
+    <input id="new-car-name" placeholder="" value="${esc(name)}">
+  </div>
+  ${swatchRow(sel)}
+  <div class="btn-row" style="margin-top:22px">
+    <button class="btn btn-ghost" data-go="cars">Скасувати</button>
+    <button class="btn btn-primary" id="confirm-car">Додати</button>
+  </div>`;
 }
 
 /* ----- Екран: дашборд авто ----- */
@@ -536,6 +530,7 @@ function viewCar(){
     <button class="icon-btn back" data-go="cars">‹</button>
     <button class="btn btn-ghost navbtn" data-go="history">Історія</button>
     <button class="btn btn-ghost navbtn" data-go="charts">Графіки</button>
+    <button class="icon-btn" data-go="carsettings" title="Налаштування авто">⚙</button>
   </div>
 
   <div class="hero-split">
@@ -549,7 +544,7 @@ function viewCar(){
 
   <div class="grid">
     <div class="stat"><div class="label">€ / 100 км</div><div class="value num">${fmt(st.avgEur100,2)}<span class="unit">€</span></div></div>
-    <div class="stat"><div class="label">км на 1 л</div><div class="value num">${fmt(st.avgKmL,1)}</div></div>
+    <div class="stat"><div class="label">€ за літр</div><div class="value num">${fmt(st.avgPriceL,3)}<span class="unit">€</span></div></div>
     <div class="stat"><div class="label">загальний пробіг</div><div class="value num">${fmt(st.totalDist,0)}<span class="unit">км</span></div></div>
     <div class="stat"><div class="label">всього витрачено</div><div class="value num">${fmt(st.totalSpent,2)}<span class="unit">€</span></div></div>
   </div>
@@ -724,45 +719,44 @@ function viewCharts(){
   }</div>`;
 }
 
-/* ----- Екран: налаштування ----- */
-function viewSettings(){
+/* ----- Екран: дані (глобально) ----- */
+function viewData(){
   return `
-  <div class="topbar"><button class="icon-btn back" data-go="cars">‹</button><h1>Налаштування</h1></div>
+  <div class="topbar"><button class="icon-btn back" data-go="cars">‹</button><h1>Дані</h1></div>
 
-  <div class="section-title">Вигляд</div>
-  <div class="toggle-row ${state.theme==='dark'?'on':''}" id="toggle-theme">
-    <div><div class="t-label">Темна тема</div><div class="t-sub">Вимкни для світлої</div></div>
-    <div class="switch"></div>
-  </div>
-
-  <div class="section-title">Дані</div>
   <div class="btn-row"><button class="btn btn-ghost" id="exp-json">Зберегти копію</button><button class="btn btn-ghost" id="exp-csv">Експорт CSV</button></div>
   <button class="btn btn-ghost" id="imp-json">Відновити з копії</button>
-  <div style="color:var(--text-dim);font-size:12px;margin:8px 4px 0;line-height:1.5">Копія — повний файл для відновлення в додатку. CSV — таблиця для перегляду в Excel чи Таблицях.</div>
+  <div style="color:var(--text-dim);font-size:12px;margin:8px 4px 0;line-height:1.5">Копія — повний файл усіх авто для відновлення в додатку. CSV — таблиця для перегляду в Excel чи Таблицях.</div>
   <input type="file" id="imp-file" accept="application/json,.json" style="display:none">
   ${ state._pendingImport ? `
     <div class="preview" style="display:block;margin-top:12px">Файл прочитано: <b>${state._pendingImport.cars.length}</b> авто. Замінити поточні дані?</div>
     <div class="btn-row"><button class="btn btn-ghost" id="imp-cancel">Скасувати</button><button class="btn btn-primary" id="imp-confirm">Замінити</button></div>` : "" }
   ${ state._importError ? `<div class="preview" style="display:block;border-color:var(--danger);color:var(--danger);margin-top:12px">${esc(state._importError)}</div>` : "" }
 
-  ${activeCar()?(()=>{ const cc=accentFor(activeCar()); const col=cc?cc.base:"var(--grass)"; return `
-  <div class="section-title" style="margin-top:24px">Налаштовується авто</div>
-  <div class="settings-carname" style="border-left-color:${col}">${esc(activeCar().name)}</div>
+  <div style="text-align:center;color:var(--text-dim);font-size:12px;margin-top:30px">Заправка · дані лише на цьому пристрої</div>`;
+}
+
+/* ----- Екран: налаштування авто ----- */
+function viewCarSettings(){
+  const car = activeCar();
+  if(!car) return viewCars();
+  const cc = accentFor(car); const col = cc?cc.base:"var(--grass)";
+  return `
+  <div class="topbar"><button class="icon-btn back" data-go="car">‹</button><h1>Авто</h1></div>
+
+  <div class="settings-carname" style="border-left-color:${col}">${esc(car.name)}</div>
+
   ${ state.uiRename ? `
-    <div class="field" style="margin-bottom:12px"><input id="rename-input" value="${esc(activeCar().name)}" style="font-size:24px"></div>
+    <div class="field" style="margin-bottom:12px"><input id="rename-input" value="${esc(car.name)}"></div>
     <div class="btn-row"><button class="btn btn-ghost" id="rename-cancel">Скасувати</button><button class="btn btn-primary" id="rename-save">Зберегти</button></div>`
   : `
-    <div class="field" style="margin-bottom:4px"><label>Колір авто</label></div>
-    ${swatchRow(activeCar().accent||"green")}
-    ${brandSelect(activeCar().accent||"green")}
-    <button class="btn btn-ghost" id="rename-car" style="margin:14px 0 12px">Перейменувати</button>
+    ${swatchRow(car.accent||"green")}
+    <button class="btn btn-ghost" id="rename-car" style="margin:18px 0 12px">Перейменувати</button>
     ${ state.uiDelCar ? `
-      <div class="preview" style="display:block;border-color:var(--danger);color:var(--danger)">Видалити «${esc(activeCar().name)}» з усіма заправками? Це не можна скасувати.</div>
+      <div class="preview" style="display:block;border-color:var(--danger);color:var(--danger)">Видалити «${esc(car.name)}» з усіма заправками? Це не можна скасувати.</div>
       <div class="btn-row"><button class="btn btn-ghost" id="del-cancel">Скасувати</button><button class="btn btn-danger" id="del-confirm">Видалити</button></div>`
     : `<button class="btn btn-ghost" id="del-car" style="color:var(--danger)">Видалити авто</button>` }
-    ` }`;})():""}
-
-  <div style="text-align:center;color:var(--text-dim);font-size:12px;margin-top:30px">Заправка · v1 · дані лише на цьому пристрої</div>`;
+  ` }`;
 }
 
 /* =========================================================
@@ -803,7 +797,7 @@ function lineChart(values, labels, dec){
 function go(view){
   state.view=view;
   state.editFillId=null; state._addError=null; state._arm=null;
-  state.uiAddCar=false; state.uiRename=false; state.uiDelCar=false; state.uiAddAccent=null;
+  state.uiRename=false; state.uiDelCar=false; state.uiAddName=null; state.uiAddAccent=null;
   state._pendingImport=null; state._importError=null;
   save(); render();
 }
@@ -812,40 +806,45 @@ function bind(){
   // навігація
   document.querySelectorAll("[data-go]").forEach(el=>el.onclick=()=>{ feedback(); go(el.dataset.go); });
 
-  // відкрити авто
-  document.querySelectorAll("[data-open]").forEach(el=>el.onclick=()=>{
-    feedback(); state.activeCarId=el.dataset.open; go("car");
+  // відкрити авто (тап) + утримання → налаштування авто
+  document.querySelectorAll("[data-open]").forEach(el=>{
+    let timer=null, longed=false;
+    const open=()=>{ if(longed){longed=false;return;} feedback(); state.activeCarId=el.dataset.open; go("car"); };
+    const start=()=>{ longed=false; timer=setTimeout(()=>{ longed=true; feedback(); state.activeCarId=el.dataset.open; go("carsettings"); },550); };
+    const cancel=()=>{ clearTimeout(timer); };
+    el.onclick=open;
+    el.addEventListener("touchstart",start,{passive:true});
+    el.addEventListener("touchend",cancel);
+    el.addEventListener("touchmove",cancel);
+    el.addEventListener("mousedown",start);
+    el.addEventListener("mouseup",cancel);
+    el.addEventListener("mouseleave",cancel);
   });
 
-  // додати авто (інлайн, без prompt)
-  const addCar=document.querySelector("[data-add-car]");
-  if(addCar) addCar.onclick=()=>{ feedback(); state.uiAddCar=true; render(); setTimeout(()=>{const i=document.getElementById("new-car-name"); if(i)i.focus();},50); };
-  const cancelCar=document.getElementById("cancel-car");
-  if(cancelCar) cancelCar.onclick=()=>{ state.uiAddCar=false; render(); };
+  // перемикач теми (головний екран)
+  const ttTop=document.getElementById("toggle-theme-top");
+  if(ttTop) ttTop.onclick=()=>{ state.theme = state.theme==="dark"?"light":"dark"; feedback(); save(); render(); };
+
+  // === екран нового авто ===
+  const newName=document.getElementById("new-car-name");
+  if(newName) newName.oninput=()=>{ state.uiAddName=newName.value; };
   const confirmCar=document.getElementById("confirm-car");
   if(confirmCar) confirmCar.onclick=()=>{
-    const name=(document.getElementById("new-car-name").value||"").trim();
-    if(!name) return;
+    const name=((document.getElementById("new-car-name")||{}).value||state.uiAddName||"").trim();
+    if(!name){ const i=document.getElementById("new-car-name"); if(i)i.focus(); return; }
     const c={id:uid(),name,accent:(state.uiAddAccent||"green"),createdAt:Date.now(),fills:[]};
-    state.cars.push(c); state.activeCarId=c.id; state.uiAddCar=false; state.uiAddAccent=null; feedback(); save(); go("car");
+    state.cars.push(c); state.activeCarId=c.id; state.uiAddName=null; state.uiAddAccent=null; feedback(); save(); go("car");
   };
 
-  // свотчі кольору. На екрані списку (додавання авто) — змінюють тимчасовий вибір.
-  // У налаштуваннях — одразу застосовують колір до активного авто.
+  // свотчі кольору. На екрані нового авто — тимчасовий вибір (зберігаємо введену назву).
+  // У налаштуваннях авто — одразу застосовують колір.
   document.querySelectorAll("[data-accent]").forEach(el=>el.onclick=()=>{
     feedback();
-    if(state.uiAddCar){ state.uiAddAccent=el.dataset.accent; render(); }
-    else { const c=activeCar(); if(c){ c.accent=el.dataset.accent; save(); render(); } }
+    if(state.view==="addcar"){
+      const i=document.getElementById("new-car-name"); if(i) state.uiAddName=i.value;
+      state.uiAddAccent=el.dataset.accent; render();
+    } else { const c=activeCar(); if(c){ c.accent=el.dataset.accent; save(); render(); } }
   });
-
-  // випадний список марки — те саме, але обирає фірмовий пресет
-  const brandSel=document.getElementById("brand-select");
-  if(brandSel) brandSel.onchange=()=>{
-    const id=brandSel.value; if(!id) return;
-    feedback();
-    if(state.uiAddCar){ state.uiAddAccent=id; render(); }
-    else { const c=activeCar(); if(c){ c.accent=id; save(); render(); } }
-  };
 
   // двокрокове підтвердження (видалення)
   document.querySelectorAll("[data-arm]").forEach(el=>el.onclick=()=>{ feedback(); arm(el.dataset.arm); });
@@ -855,7 +854,7 @@ function bind(){
     feedback(); state.editFillId=el.dataset.edit; state.view="add"; state._addError=null; save(); render();
   });
 
-  // === екран додавання ===
+  // === екран додавання заправки ===
   const toggleFull=document.getElementById("toggle-full");
   if(toggleFull) toggleFull.onclick=()=>{ feedback(); toggleFull.classList.toggle("on"); updatePreview(); };
 
@@ -874,10 +873,7 @@ function bind(){
 
   if(document.getElementById("toggle-full")) updatePreview();
 
-  // === налаштування ===
-  const tt=document.getElementById("toggle-theme");
-  if(tt) tt.onclick=()=>{ state.theme = state.theme==="dark"?"light":"dark"; feedback(); save(); render(); };
-
+  // === дані (експорт/імпорт) ===
   const ej=document.getElementById("exp-json"); if(ej) ej.onclick=exportJSON;
   const ec=document.getElementById("exp-csv");  if(ec) ec.onclick=exportCSV;
   const ij=document.getElementById("imp-json"); if(ij) ij.onclick=()=>document.getElementById("imp-file").click();
